@@ -3,6 +3,11 @@ name = "candor-cognitive"
 version.workspace = true
 edition.workspace = true
 
+[features]
+default = []
+vulkan = []
+cuda = []
+
 [dependencies]
 candor-core = { path = "../candor-core" }
 tokio = { workspace = true }

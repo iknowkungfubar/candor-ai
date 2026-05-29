@@ -30,7 +30,7 @@ impl HardwareBackend {
         {
             return HardwareBackend::Metal;
         }
-        // Check for Vulkan
+        // Check for Vulkan (enabled via --features vulkan)
         #[cfg(feature = "vulkan")]
         {
             return HardwareBackend::Vulkan;

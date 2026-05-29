@@ -1,0 +1,16 @@
+[package]
+name = "candor-memory"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+candor-core = { path = "../candor-core" }
+candor-cognitive = { path = "../candor-cognitive" }
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+chrono = { workspace = true }
+surrealdb = { workspace = true, features = ["kv-mem"] }

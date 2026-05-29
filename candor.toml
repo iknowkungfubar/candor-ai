@@ -1,0 +1,43 @@
+# Candor AI Configuration
+# 
+# From the design doc: "Defaults are Decisions. The Wasmtime sandbox
+# enforces a deny-by-default posture."
+
+[server]
+host = "0.0.0.0"
+port = 31337
+checkpoint_dir = "/tmp/candor-checkpoints"
+max_iterations = 100
+
+[sandbox]
+scratchpad_dir = "/tmp/agent_scratchpad"
+wasm_cache_dir = "/tmp/candor-wasm"
+default_timeout_secs = 15
+default_memory_mb = 256
+default_fuel_limit = 1_000_000
+
+[inference]
+# Uncomment to enable cloud APIs:
+# anthropic_api_key = "sk-ant-..."
+# openai_api_key = "sk-..."
+
+# Local model (quantized, runs on CPU/GPU via mistral.rs)
+# local_model_path = "/path/to/model.gguf"
+
+embedding_model = "all-MiniLM-L6-v2"
+embedding_dim = 384
+
+[memory]
+# Use "mem" for in-memory (dev) or "rocksdb" for persistent (prod)
+backend = "mem"
+# database_path = "/var/lib/candor/db"
+compaction_token_limit = 135000
+
+[sentinel]
+enabled = true
+semantic_audit_enabled = true
+scopes = []
+
+[telemetry]
+enabled = false
+# otlp_endpoint = "http://localhost:4317"

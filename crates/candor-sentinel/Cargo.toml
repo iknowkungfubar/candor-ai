@@ -1,0 +1,17 @@
+[package]
+name = "candor-sentinel"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+candor-core = { path = "../candor-core" }
+candor-cognitive = { path = "../candor-cognitive" }
+candor-graph = { path = "../candor-graph" }
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+regex = "1"
+async-trait = { workspace = true }

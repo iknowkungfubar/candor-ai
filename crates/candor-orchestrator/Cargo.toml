@@ -1,0 +1,23 @@
+[package]
+name = "candor-orchestrator"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+candor-core = { path = "../candor-core" }
+candor-tools = { path = "../candor-tools" }
+candor-graph = { path = "../candor-graph" }
+candor-sandbox = { path = "../candor-sandbox" }
+candor-cognitive = { path = "../candor-cognitive" }
+candor-memory = { path = "../candor-memory" }
+candor-sentinel = { path = "../candor-sentinel" }
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true }
+async-trait = { workspace = true }
+petgraph = { workspace = true }

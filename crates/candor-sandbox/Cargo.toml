@@ -1,0 +1,20 @@
+[package]
+name = "candor-sandbox"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+candor-core = { path = "../candor-core" }
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+tempfile = { workspace = true }
+uuid = { workspace = true }
+
+# WASM runtime
+wasmtime = { workspace = true }
+wasmtime-wasi = { workspace = true }
+cap-std = { workspace = true }

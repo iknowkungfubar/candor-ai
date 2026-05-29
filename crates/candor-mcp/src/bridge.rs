@@ -1,4 +1,5 @@
 /// Bridge between MCP tools and Candor's Tool trait.
+use std::sync::Arc;
 use tracing::info;
 
 use candor_core::error::CoreError;
@@ -8,6 +9,7 @@ use super::client::McpClient;
 use super::transport;
 
 /// Wraps an MCP server connection as a Candor tool.
+#[allow(dead_code)]
 pub struct McpToolBridge {
     pub client: Arc<tokio::sync::Mutex<McpClient>>,
 }

@@ -95,12 +95,11 @@ pub fn parse_isa_from_markdown(
                     artifacts.push(artifact);
                 }
             }
-            Some("autonomous") => {
-                if trimmed.to_lowercase().contains("false") || trimmed.to_lowercase().contains("no")
-                {
+            Some("autonomous")
+                if (trimmed.to_lowercase().contains("false") || trimmed.to_lowercase().contains("no"))
+                => {
                     fully_autonomous = false;
                 }
-            }
             _ => {}
         }
     }

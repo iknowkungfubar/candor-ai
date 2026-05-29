@@ -117,6 +117,7 @@ pub trait OnLoopIteration: Send + Sync {
 
 // ── Full Lifecycle Hooks Registry ──
 
+#[derive(Default)]
 pub struct FullLifecycleHooks {
     pub before_tool: Vec<Box<dyn BeforeToolCallback>>,
     pub after_tool: Vec<Box<dyn AfterToolCallback>>,
@@ -137,29 +138,6 @@ pub struct FullLifecycleHooks {
     pub on_iteration: Vec<Box<dyn OnLoopIteration>>,
 }
 
-impl Default for FullLifecycleHooks {
-    fn default() -> Self {
-        Self {
-            before_tool: Vec::new(),
-            after_tool: Vec::new(),
-            before_transition: Vec::new(),
-            after_transition: Vec::new(),
-            checkpoint: Vec::new(),
-            on_error: Vec::new(),
-            on_complete: Vec::new(),
-            before_phase: Vec::new(),
-            after_phase: Vec::new(),
-            before_read: Vec::new(),
-            after_write: Vec::new(),
-            before_git: Vec::new(),
-            after_git: Vec::new(),
-            before_sandbox: Vec::new(),
-            after_sandbox: Vec::new(),
-            before_embed: Vec::new(),
-            on_iteration: Vec::new(),
-        }
-    }
-}
 
 impl FullLifecycleHooks {
     pub fn with_before_tool(mut self, hook: Box<dyn BeforeToolCallback>) -> Self {

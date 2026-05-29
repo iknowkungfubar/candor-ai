@@ -32,7 +32,7 @@ pub fn deterministic_embed(text: &str, dim: usize) -> Vec<f32> {
 
         // Spread the hash across multiple dimensions
         for j in 0..8 {
-            let idx = ((hash as usize + j * 31 + i * 7) % dim as u64 as usize) as usize;
+            let idx = ((hash as usize + j * 31 + i * 7) % dim as u64 as usize);
             let bit = ((hash >> (j * 8)) & 0xFF) as f32;
             vec[idx] += (bit - 128.0) / 128.0; // Normalize to [-1, 1]
         }

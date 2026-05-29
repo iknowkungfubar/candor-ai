@@ -132,7 +132,7 @@ impl Transport for HttpTransport {
             "params": {}
         });
         match self.send_request(request).await {
-            Ok(v) => Ok(!v.get("error").is_some()),
+            Ok(v) => Ok(v.get("error").is_none()),
             Err(_) => Ok(false),
         }
     }

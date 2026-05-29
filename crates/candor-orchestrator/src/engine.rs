@@ -195,23 +195,20 @@ impl PhaseContext {
         s.log_event("Observe: scanning project");
 
         // List project structure
-        if let Some(tool) = self.tools.find("list_dir") {
-            if let Ok(out) = tool.execute(ctx, &[]).await {
+        if let Some(tool) = self.tools.find("list_dir")
+            && let Ok(out) = tool.execute(ctx, &[]).await {
                 s.append_message(&format!("Project files:\n{}", out.output));
             }
-        }
         // Find key files
-        if let Some(tool) = self.tools.find("search_files") {
-            if let Ok(out) = tool.execute(ctx, &["*.rs".to_string()]).await {
+        if let Some(tool) = self.tools.find("search_files")
+            && let Ok(out) = tool.execute(ctx, &["*.rs".to_string()]).await {
                 s.append_message(&format!("\nRust sources:\n{}", out.output));
             }
-        }
         // Read Cargo.toml
-        if let Some(tool) = self.tools.find("read_file") {
-            if let Ok(out) = tool.execute(ctx, &["Cargo.toml".into()]).await {
+        if let Some(tool) = self.tools.find("read_file")
+            && let Ok(out) = tool.execute(ctx, &["Cargo.toml".into()]).await {
                 s.append_message(&format!("\nCargo.toml:\n{}", out.output));
             }
-        }
         s.log_event("Observe: complete");
         Ok(())
     }
@@ -362,11 +359,7 @@ async fn write_code_files(output: &str, workdir: &str) -> usize {
             code.clear();
             in_block = false;
         } else if line.trim() == "```" {
-            if in_block {
-                in_block = false;
-            } else {
-                in_block = true;
-            }
+            in_block = !in_block;
         } else if in_block {
             if !code.is_empty() { code.push('\n'); }
             code.push_str(line);
@@ -377,13 +370,12 @@ async fn write_code_files(output: &str, workdir: &str) -> usize {
 }
 
 async fn flush_file(path: &Option<String>, code: &str, workdir: &str) {
-    if let Some(p) = path {
-        if !code.is_empty() && !p.is_empty() {
+    if let Some(p) = path
+        && !code.is_empty() && !p.is_empty() {
             let full = std::path::PathBuf::from(workdir).join(p);
             let _ = tokio::fs::create_dir_all(full.parent().unwrap()).await;
             let _ = tokio::fs::write(&full, code).await;
         }
-    }
 }
 
 // ── Tests ──

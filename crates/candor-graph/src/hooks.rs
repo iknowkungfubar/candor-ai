@@ -87,6 +87,7 @@ pub trait CompletionCallback: Send + Sync {
 }
 
 /// The full set of lifecycle hooks registered on the graph runner.
+#[derive(Default)]
 pub struct LifecycleHooks {
     pub before_tool: Vec<Box<dyn BeforeToolCallback>>,
     pub after_tool: Vec<Box<dyn AfterToolCallback>>,
@@ -97,19 +98,6 @@ pub struct LifecycleHooks {
     pub on_complete: Vec<Box<dyn CompletionCallback>>,
 }
 
-impl Default for LifecycleHooks {
-    fn default() -> Self {
-        Self {
-            before_tool: Vec::new(),
-            after_tool: Vec::new(),
-            before_transition: Vec::new(),
-            after_transition: Vec::new(),
-            checkpoint: Vec::new(),
-            on_error: Vec::new(),
-            on_complete: Vec::new(),
-        }
-    }
-}
 
 impl LifecycleHooks {
     pub fn with_before_tool(

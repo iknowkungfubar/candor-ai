@@ -72,19 +72,17 @@ impl CognitiveEngine {
         &self,
         request: &LlmRequest,
     ) -> Result<String, CoreError> {
-        if self.frontier_healthy {
-            if let Some(ref backend) = self.frontier_pipeline {
+        if self.frontier_healthy
+            && let Some(ref backend) = self.frontier_pipeline {
                 info!("Routing to frontier pipeline");
                 return Ok(backend.generate(request).await?.text);
             }
-        }
 
-        if self.local_healthy {
-            if let Some(ref backend) = self.local_pipeline {
+        if self.local_healthy
+            && let Some(ref backend) = self.local_pipeline {
                 info!("Falling back to local pipeline");
                 return Ok(backend.generate(request).await?.text);
             }
-        }
 
         Err(CoreError::Internal(
             "No healthy inference backend available".into(),

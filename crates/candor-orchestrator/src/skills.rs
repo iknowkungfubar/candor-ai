@@ -100,8 +100,7 @@ pub fn extract_skills_from_log(
             .join("-");
 
         let pitfalls = log.iter()
-            .filter(|e| e.contains("failed") || e.contains("error") || e.contains("FAILED"))
-            .map(|e| e.clone())
+            .filter(|e| e.contains("failed") || e.contains("error") || e.contains("FAILED")).cloned()
             .take(5)
             .collect();
 
@@ -142,8 +141,8 @@ pub async fn persist_skills(
         // If the skill already exists, merge and increment use count
         if path.exists() {
             info!(skill = %skill.name, "Updating existing skill");
-            if let Ok(existing) = tokio::fs::read_to_string(&path).await {
-                if existing.contains(&skill.description) {
+            if let Ok(existing) = tokio::fs::read_to_string(&path).await
+                && existing.contains(&skill.description) {
                     // Same skill, bump counter
                     let updated = existing.replace("use_count: 1", &format!("use_count: {}", skill.use_count + 1));
                     tokio::fs::write(&path, updated).await
@@ -151,7 +150,6 @@ pub async fn persist_skills(
                     written += 1;
                     continue;
                 }
-            }
         }
 
         tokio::fs::write(&path, content)

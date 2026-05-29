@@ -32,11 +32,10 @@ impl Tool for RunTestsTool {
         if !fail_fast {
             cmd.arg("--no-fail-fast");
         }
-        if let Some(filter) = &test_filter {
-            if !filter.starts_with("--") {
+        if let Some(filter) = &test_filter
+            && !filter.starts_with("--") {
                 cmd.arg(filter);
             }
-        }
 
         let output = cmd
             .stdout(Stdio::piped())

@@ -137,16 +137,14 @@ impl CircuitBreaker {
             CircuitState::HalfOpen => Ok(()),
             CircuitState::Open => {
                 // Check if reset timeout has elapsed
-                if let Ok(guard) = self.last_failure.lock() {
-                    if let Some(last) = *guard {
-                        if last.elapsed() >= self.reset_timeout {
+                if let Ok(guard) = self.last_failure.lock()
+                    && let Some(last) = *guard
+                        && last.elapsed() >= self.reset_timeout {
                             // Transition to half-open
                             self.state.store(2, std::sync::atomic::Ordering::SeqCst);
                             info!("Circuit breaker: open → half-open");
                             return Ok(());
                         }
-                    }
-                }
                 Err(CoreError::Internal(
                     "Circuit breaker is open — API calls suspended".into(),
                 ))

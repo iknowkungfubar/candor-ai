@@ -71,11 +71,10 @@ impl CheckpointManager {
             .map_err(|e| CoreError::Io(e.to_string()))?
         {
             let name = entry.file_name();
-            if let Some(name_str) = name.to_str() {
-                if name_str.ends_with(".json") {
+            if let Some(name_str) = name.to_str()
+                && name_str.ends_with(".json") {
                     entries.push(entry);
                 }
-            }
         }
 
         // Sort by filename descending (latest first).

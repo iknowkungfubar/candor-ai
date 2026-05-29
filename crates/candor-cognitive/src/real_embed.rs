@@ -9,7 +9,7 @@ use tracing::info;
 
 use candor_core::error::CoreError;
 
-use super::embedding::{EmbeddingModel, EmbeddingOptions, TextEmbedding as EmbeddingEngine};
+use super::embedding::{EmbeddingOptions, TextEmbedding as EmbeddingEngine};
 
 /// Generate a deterministic embedding from text using a semantic hash.
 /// Better than zero vectors — preserves similarity between related texts.

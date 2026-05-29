@@ -2,7 +2,6 @@
 ///
 /// From design doc: "Local inference is powered natively by the mistral.rs
 /// engine (v0.8.0), which integrates the HuggingFace Candle framework."
-use std::sync::Arc;
 use std::time::Instant;
 use tracing::{info, warn};
 

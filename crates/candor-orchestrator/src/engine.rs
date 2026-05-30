@@ -13,6 +13,7 @@ use candor_core::ideal::IdealStateArtifact;
 use candor_core::state::AgentState;
 use candor_graph::hooks::LifecycleHooks;
 use candor_graph::node::AgentNode as GraphNode;
+use candor_graph::recovery::{analyze_error, RecoveryNode};
 use candor_graph::runner::GraphRunner;
 use candor_memory::store::MemorySystem;
 use candor_sandbox::unified::ToolSandbox;
@@ -104,7 +105,64 @@ impl OrchestratorEngine {
         }
 
         let start = self.build_graph()?;
-        let result = self.graph_runner.execute_graph(start).await;
+
+        // ── Recovery loop around graph execution ──
+        // Wraps execute_graph() with analyze_error → RecoveryNode retry logic.
+        // Retryable errors are looped back after RecoveryNode resets state.
+        // Non-retryable errors are escalated as CoreError::GraphExecution.
+        let recovery = RecoveryNode::new("phase-recovery", 3);
+        let result = loop {
+            let graph_result = self.graph_runner.execute_graph(start).await;
+
+            match graph_result {
+                Ok(()) => break Ok(()),
+                Err(e) => {
+                    let strategy = analyze_error(&e);
+                    info!(
+                        reason = %strategy.reason,
+                        retry = strategy.retry,
+                        escalate = strategy.escalate,
+                        "Graph execution error analyzed"
+                    );
+
+                    if strategy.retry {
+                        // Attempt recovery via RecoveryNode
+                        let state = self.graph_runner.state();
+                        match recovery.execute(state).await
+                        {
+                            Ok(()) => {
+                                info!("Recovery applied — retrying phase");
+                                // Reset the graph runner's iteration counter
+                                // slightly so the retried run has room.
+                                {
+                                    let state = self.graph_runner.state();
+                                    let mut s = state.lock().await;
+                                    if s.iteration_count > 0 {
+                                        s.iteration_count =
+                                            s.iteration_count.saturating_sub(1);
+                                    }
+                                }
+                                continue;
+                            }
+                            Err(recovery_err) => {
+                                // Recovery node exhausted its retries
+                                let msg = format!(
+                                    "Recovery exhausted ({}): {} — {}",
+                                    strategy.reason, recovery_err, e,
+                                );
+                                error!("{}", msg);
+                                break Err(CoreError::GraphExecution(msg));
+                            }
+                        }
+                    } else {
+                        // Escalate — this error cannot be recovered from
+                        let msg = format!("Escalated: {} — {}", strategy.reason, e);
+                        error!("{}", msg);
+                        break Err(CoreError::GraphExecution(msg));
+                    }
+                }
+            }
+        };
 
         self.maybe_compact().await;
 

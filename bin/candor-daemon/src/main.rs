@@ -14,7 +14,9 @@ use candor_core::ideal::IdealStateArtifact;
 use candor_memory::store::MemorySystem;
 use candor_orchestrator::OrchestratorEngine;
 
+mod chat;
 mod routes;
+mod stt;
 
 const GREEN: &str = "\x1b[32m";
 const CYAN: &str = "\x1b[36m";
@@ -51,6 +53,22 @@ struct Cli {
     /// Run a task through the 7-phase agent pipeline.
     #[arg(long, help = "Task description for the agent to execute")]
     task: Option<String>,
+
+    /// Enter interactive chat REPL mode (readline-style conversation).
+    #[arg(long, help = "Start an interactive conversational chat REPL")]
+    chat: bool,
+
+    /// Listen mode: read tasks line-by-line from stdin pipe (for AI integration).
+    #[arg(long, help = "Read tasks from stdin pipe (non-interactive)")]
+    listen: bool,
+
+    /// Voice task: record from microphone, transcribe with whisper, and execute.
+    #[arg(long, help = "Record voice command, transcribe, and run as a task")]
+    voice_task: bool,
+
+    /// Optional prompt prefix for --voice-task (e.g. \"In French, \").
+    #[arg(long, help = "Optional prompt prefix prepended to voice transcription")]
+    voice_prompt: Option<String>,
 
     /// Check daemon health and exit.
     #[arg(long)]
@@ -104,6 +122,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // ── CLI modes ──
     if let Some(task) = cli.task {
         run_cli_task(task, orchestrator).await?;
+        return Ok(());
+    }
+
+    if cli.chat {
+        chat::run_chat(orchestrator).await?;
+        return Ok(());
+    }
+
+    if cli.listen {
+        chat::run_listen(orchestrator).await?;
+        return Ok(());
+    }
+
+    // ── Voice task ──
+    if cli.voice_task {
+        run_voice_task(cli.voice_prompt, orchestrator).await?;
         return Ok(());
     }
 
@@ -255,6 +289,41 @@ async fn run_cli_task(task: String, orchestrator: Arc<tokio::sync::Mutex<Orchest
         }
     }
     Ok(())
+}
+
+/// Run a voice-activated task: record → transcribe → execute.
+async fn run_voice_task(
+    voice_prompt: Option<String>,
+    orchestrator: Arc<tokio::sync::Mutex<OrchestratorEngine>>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    println!("\n{}🎤 Candor Voice Task{}", BOLD, RESET);
+
+    match stt::transcribe_mic().await {
+        Ok(transcribed) => {
+            if transcribed.trim().is_empty() {
+                eprintln!("{RED}✗ No speech detected.{RESET}");
+                return Ok(());
+            }
+
+            let task = match voice_prompt {
+                Some(prefix) => format!("{} {}", prefix.trim(), transcribed.trim()),
+                None => transcribed.trim().to_string(),
+            };
+
+            println!("\n{CYAN}▶ Task:{RESET} {BOLD}{task}{RESET}\n");
+            run_cli_task(task, orchestrator).await
+        }
+        Err(e) => {
+            eprintln!("\n{RED}✗ Voice task failed:{RESET} {e}");
+            if matches!(&e, stt::SttError::Unavailable) {
+                println!("\n{YELLOW}💡 Tip:{RESET} Install whisper-cpp:");
+                println!("  git clone https://github.com/ggerganov/whisper.cpp.git");
+                println!("  cd whisper.cpp && make && sudo make install");
+                println!("  Or download a model: make tiny.en");
+            }
+            Ok(())
+        }
+    }
 }
 
 async fn run_health_check(orchestrator: Arc<tokio::sync::Mutex<OrchestratorEngine>>) {

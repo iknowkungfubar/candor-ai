@@ -60,3 +60,11 @@ impl From<serde_json::Error> for CoreError {
         CoreError::Serialization(e.to_string())
     }
 }
+
+/// Convert any CoreError into the GraphExecution variant so graph-runner
+/// errors propagate cleanly through the recovery loop.
+impl CoreError {
+    pub fn into_graph_execution(self) -> Self {
+        CoreError::GraphExecution(self.to_string())
+    }
+}

@@ -9,6 +9,7 @@
 ///   candor --voice-task "prompt"  # pre-seeded task prefix
 use std::path::PathBuf;
 use std::process::Stdio;
+use super::util::find_on_path;
 
 /// Supported STT backends, probed at runtime.
 #[derive(Debug, Clone, PartialEq)]
@@ -249,28 +250,6 @@ pub async fn transcribe_mic_with_duration(duration: u64) -> Result<String, SttEr
     result
 }
 
-/// Helper: find a binary on PATH.
-fn find_on_path(name: &str) -> Option<PathBuf> {
-    std::env::var_os("PATH")
-        .as_ref()
-        .and_then(|paths| {
-            std::env::split_paths(paths).find_map(|dir| {
-                let full = dir.join(name);
-                if full.is_file() {
-                    // Also try with .exe on Windows (harmless on Unix).
-                    Some(full)
-                } else {
-                    let with_ext = dir.join(format!("{}.exe", name));
-                    if with_ext.is_file() {
-                        Some(with_ext)
-                    } else {
-                        None
-                    }
-                }
-            })
-        })
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -284,11 +263,11 @@ mod tests {
     #[test]
     fn test_find_on_path_known() {
         // sh should always exist.
-        assert!(find_on_path("sh").is_some() || cfg!(target_os = "windows"));
+        assert!(crate::util::find_on_path("sh").is_some() || cfg!(target_os = "windows"));
     }
 
     #[test]
     fn test_find_on_path_nonexistent() {
-        assert!(find_on_path("this-binary-should-not-exist-42").is_none());
+        assert!(crate::util::find_on_path("this-binary-should-not-exist-42").is_none());
     }
 }

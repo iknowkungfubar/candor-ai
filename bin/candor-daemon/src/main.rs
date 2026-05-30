@@ -30,6 +30,7 @@ mod chat;
 mod routes;
 mod stt;
 mod tts;
+mod util;
 
 /// Candor AI — Lawful Good, Rust-native Agentic Operating System.
 #[derive(Parser, Debug)]

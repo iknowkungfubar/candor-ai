@@ -9,6 +9,7 @@
 /// Set `CANDOR_AUDIO_OUTPUT` to override the playback device (default: "default").
 use std::path::PathBuf;
 use std::process::Stdio;
+use super::util::find_on_path;
 
 /// Supported TTS backends, probed at runtime.
 #[derive(Debug, Clone, PartialEq)]
@@ -214,11 +215,10 @@ impl TtsBackend {
     /// Resolve the piper-tts model path.
     fn resolve_piper_model() -> Option<String> {
         // Check env var first.
-        if let Ok(path) = std::env::var("CANDOR_TTS_MODEL") {
-            if std::path::Path::new(&path).exists() {
+        if let Ok(path) = std::env::var("CANDOR_TTS_MODEL")
+            && std::path::Path::new(&path).exists() {
                 return Some(path);
             }
-        }
 
         // Check common installation paths.
         let candidates = [
@@ -314,25 +314,6 @@ pub async fn speak(text: &str) -> Result<(), TtsError> {
     }
     println!("🔊 Speaking… (backend: {})", b.label());
     b.speak(text).await
-}
-
-/// Helper: find a binary on PATH (shared with stt.rs).
-fn find_on_path(name: &str) -> Option<PathBuf> {
-    std::env::var_os("PATH").as_ref().and_then(|paths| {
-        std::env::split_paths(paths).find_map(|dir| {
-            let full = dir.join(name);
-            if full.is_file() {
-                Some(full)
-            } else {
-                let with_ext = dir.join(format!("{}.exe", name));
-                if with_ext.is_file() {
-                    Some(with_ext)
-                } else {
-                    None
-                }
-            }
-        })
-    })
 }
 
 #[cfg(test)]

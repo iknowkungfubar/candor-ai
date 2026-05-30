@@ -16,8 +16,8 @@ pub mod local;
 pub mod real_embed;
 
 pub use backends::{
-    AnthropicBackend, LlmBackend, LlmRequest, LlmResponse, MockBackend,
-    OpenAiBackend,
+    AnthropicBackend, DeepSeekBackend, GeminiBackend, LlmBackend, LlmRequest,
+    LlmResponse, MockBackend, OpenAiBackend,
 };
 pub use embedding::TextEmbedding;
 pub use engine::CognitiveEngine;

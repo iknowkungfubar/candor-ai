@@ -16,7 +16,8 @@ use candor_sentinel::doctrine::enforce_doctrine;
 #[tokio::test]
 async fn test_sentinel_is_before_tool_callback() {
     let cog = Arc::new(candor_cognitive::CognitiveEngine::new(None, None).await.unwrap());
-    let sentinel = SentinelInterceptor::new(cog, vec![]);
+    let mut sentinel = SentinelInterceptor::new(cog, vec![]);
+    sentinel.deactivate(); // semantic audit needs real LLM — testing trait impl only
     let action = AgentAction {
         id: "t".into(), action_type: ActionType::GenerateCode,
         payload: "fn main() {}".into(), target_path: None,

@@ -719,6 +719,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "candor-core",
+ "candor-sandbox",
  "ndarray 0.16.1",
  "reqwest",
  "serde",

@@ -35,9 +35,10 @@ pub async fn evaluate_for_slop(
     let result = match cognitive.generate_fast(&prompt).await {
         Ok(r) => r,
         Err(_) => {
-            // No backend available — cannot audit, be lenient
-            info!("Sentinel: no backend for semantic audit — passing");
-            return Ok(true);
+            // No backend available — cannot audit. Per design doc:
+            // "Silence is a failure mode; missing signals are treated as incidents"
+            warn!("Sentinel: no backend for semantic audit — rejecting (FAIL per doctrine)");
+            return Ok(false);
         }
     };
 

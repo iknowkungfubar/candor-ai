@@ -10,6 +10,7 @@ cuda = []
 
 [dependencies]
 candor-core = { path = "../candor-core" }
+candor-sandbox = { path = "../candor-sandbox" }
 tokio = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

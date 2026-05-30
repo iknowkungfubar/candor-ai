@@ -16,5 +16,4 @@ uuid = { workspace = true }
 
 # WASM runtime
 wasmtime = { workspace = true }
-wasmtime-wasi = { workspace = true }
 cap-std = { workspace = true }

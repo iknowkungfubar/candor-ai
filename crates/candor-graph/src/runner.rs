@@ -145,13 +145,25 @@ impl GraphRunner {
                     .await
                 {
                     error!(node = %node_label, error = %e, "BeforeToolCallback rejected action");
-                    // Fire on_error hooks
                     for err_hook in &self.hooks.on_error {
                         err_hook
                             .on_error(&e, &node_label, Arc::clone(&self.state))
                             .await;
                     }
                     return Err(e);
+                }
+            }
+
+            // ── Human-in-the-loop: require approval before Execute phase ──
+            if node_label == "Execute" {
+                for hook in &self.hooks.before_execute {
+                    if let Err(e) = hook
+                        .before_execute(Arc::clone(&self.state))
+                        .await
+                    {
+                        error!(node = %node_label, error = %e, "Human approval required for Execute phase");
+                        return Err(e);
+                    }
                 }
             }
 

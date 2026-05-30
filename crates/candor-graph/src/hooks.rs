@@ -86,6 +86,16 @@ pub trait CompletionCallback: Send + Sync {
     ) -> Result<(), CoreError>;
 }
 
+/// Hook fired before the Execute phase to require human-in-the-loop confirmation.
+/// If this returns Err, execution is paused until the operator approves.
+#[async_trait::async_trait]
+pub trait BeforeExecuteConfirmation: Send + Sync {
+    async fn before_execute(
+        &self,
+        state: Arc<Mutex<AgentState>>,
+    ) -> Result<(), CoreError>;
+}
+
 /// The full set of lifecycle hooks registered on the graph runner.
 #[derive(Default)]
 pub struct LifecycleHooks {
@@ -96,6 +106,7 @@ pub struct LifecycleHooks {
     pub checkpoint: Vec<Box<dyn CheckpointCallback>>,
     pub on_error: Vec<Box<dyn ErrorCallback>>,
     pub on_complete: Vec<Box<dyn CompletionCallback>>,
+    pub before_execute: Vec<Box<dyn BeforeExecuteConfirmation>>,
 }
 
 

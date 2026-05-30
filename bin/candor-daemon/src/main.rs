@@ -29,6 +29,7 @@ use candor_orchestrator::OrchestratorEngine;
 mod chat;
 mod routes;
 mod stt;
+mod tts;
 
 /// Candor AI — Lawful Good, Rust-native Agentic Operating System.
 #[derive(Parser, Debug)]
@@ -76,12 +77,22 @@ enum Commands {
         anthropic_key: Option<String>,
     },
 
-    /// Voice-activated task via whisper STT
+    /// Voice-activated task via whisper STT (one-shot)
     Voice {
         #[arg(long, help = "Prompt prefix (e.g. 'In Spanish:')")]
         prompt: Option<String>,
         #[arg(long, help = "Record duration in seconds", default_value = "5")]
         duration: u64,
+    },
+
+    /// Interactive voice conversation (listen → think → speak → loop)
+    VoiceInteractive {
+        #[arg(long, help = "Initial prompt prefix")]
+        prompt: Option<String>,
+        #[arg(long, help = "Record duration in seconds", default_value = "5")]
+        duration: u64,
+        #[arg(long, help = "Max conversation turns", default_value = "20")]
+        max_turns: u32,
     },
 
     /// Bootstrap a new candor project
@@ -143,8 +154,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             chat::run_chat(orch).await?;
         }
         Commands::Voice { prompt, duration } => {
-            println!("{CYAN}{BOLD}   Candor AI v{} — Voice Mode{RESET}\n", env!("CARGO_PKG_VERSION"));
+            println!("{CYAN}{BOLD}   Candor AI v{} — Voice Task (One-Shot){RESET}\n", env!("CARGO_PKG_VERSION"));
             run_voice_task(prompt, duration).await?;
+        }
+        Commands::VoiceInteractive { prompt, duration, max_turns } => {
+            println!("{CYAN}{BOLD}   Candor AI v{} — Voice Interactive{RESET}\n", env!("CARGO_PKG_VERSION"));
+            run_voice_interactive(prompt, duration, max_turns).await?;
         }
         Commands::Init { path } => {
             init_project(&path)?;
@@ -298,6 +313,120 @@ async fn run_voice_task(prompt: Option<String>, _duration: u64) -> Result<(), Bo
     run_cli_task(task, orch).await
 }
 
+/// Interactive voice conversation loop.
+///
+/// For each turn:
+///   1. Record audio from microphone (STT)
+///   2. Transcribe with whisper-cpp
+///   3. Process as a chat message via the cognitive engine
+///   4. Speak the response aloud (TTS)
+///   5. Loop until the user says "exit", "quit", or max_turns reached
+async fn run_voice_interactive(
+    initial_prompt: Option<String>,
+    duration: u64,
+    max_turns: u32,
+) -> Result<(), Box<dyn std::error::Error>> {
+    // Build the cognitive engine (no sentinel needed for chat).
+    let cognitive = build_cognitive(None, None, None, None).await?;
+
+    // Check TTS availability — if not installed, warn but continue.
+    let tts_ok = tts::is_available();
+    if !tts_ok {
+        println!(
+            "  {YELLOW}⚠ TTS backend not found. Install piper-tts or espeak-ng for voice responses.{RESET}"
+        );
+    }
+
+    println!(
+        "  {GREEN}Say '{CYAN}exit{GREEN}' or '{CYAN}quit{GREEN}' to stop.{RESET}"
+    );
+    println!("  {GREEN}Max {max_turns} turns.{RESET}\n");
+
+    let exit_words = ["exit", "quit", "goodbye", "stop", "done"];
+
+    for turn in 1..=max_turns {
+        println!("\n  {BOLD}[Turn {turn}/{max_turns}]{RESET}");
+
+        // ── Step 1: Listen ──
+        let text = match stt::transcribe_mic_with_duration(duration).await {
+            Ok(t) => t,
+            Err(stt::SttError::NoSpeech) => {
+                println!("  {YELLOW}No speech detected — listening again…{RESET}");
+                continue;
+            }
+            Err(e) => {
+                eprintln!("  {RED}STT error: {e}{RESET}");
+                println!("  {YELLOW}Type your message instead (or 'exit' to quit):{RESET}");
+                let mut input = String::new();
+                std::io::stdin().read_line(&mut input)?;
+                let input = input.trim().to_string();
+                if input.is_empty() {
+                    continue;
+                }
+                input
+            }
+        };
+
+        let task_text = if let Some(ref p) = initial_prompt {
+            format!("{p} {text}")
+        } else {
+            text.clone()
+        };
+
+        println!("  {CYAN}You:{RESET} {text}");
+
+        // Check for exit commands.
+        if exit_words.contains(&task_text.to_lowercase().as_str()) {
+            println!("  {GREEN}Goodbye!{RESET}");
+            if tts_ok {
+                let _ = tts::speak("Goodbye!").await;
+            }
+            break;
+        }
+
+        // ── Step 2: Think (generate response via cognitive engine) ──
+        println!("  {YELLOW}Thinking…{RESET}");
+        let request = candor_cognitive::LlmRequest {
+            system_prompt: Some("You are a helpful voice assistant. Keep responses concise and conversational — suitable for being read aloud. Answer in 1-3 sentences when possible.".into()),
+            prompt: task_text,
+            max_tokens: Some(256),
+            temperature: Some(0.7),
+            stream: false,
+            model_override: None,
+        };
+
+        let response = match cognitive.generate(&request).await {
+            Ok(r) => r,
+            Err(e) => {
+                eprintln!("  {RED}LLM error: {e}{RESET}");
+                println!("  {YELLOW}Sorry, I couldn't process that.{RESET}");
+                continue;
+            }
+        };
+
+        println!("  {GREEN}Candor:{RESET} {response}");
+
+        // ── Step 3: Speak ──
+        if tts_ok {
+            match tts::speak(&response).await {
+                Ok(()) => {}
+                Err(tts::TtsError::Unavailable) => {
+                    // Backend disappeared after initial check — unlikely.
+                }
+                Err(e) => {
+                    eprintln!("  {YELLOW}TTS warning: {e}{RESET}");
+                }
+            }
+        }
+
+        // Small pause between turns.
+        tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+    }
+
+    println!("\n  {BOLD}Voice session ended.{RESET}");
+    Ok(())
+}
+
 // ── Init project ──
 
 fn init_project(dir: &str) -> Result<(), Box<dyn std::error::Error>> {
@@ -338,6 +467,10 @@ async fn run_doctor() {
         ("git", check_cmd("git")),
         ("bubblewrap", check_cmd("bwrap")),
         ("whisper", check_cmd("whisper-cpp") || check_cmd("whisper-cli") || check_cmd("whisper")),
+        ("piper-tts", check_cmd("piper")),
+        ("espeak-ng", check_cmd("espeak-ng") || check_cmd("espeak")),
+        ("aplay", check_cmd("aplay")),
+        ("arecord", check_cmd("arecord")),
         ("surrealDB", true), // embedded, always available
     ];
     let all_ok = checks.iter().all(|(_, ok)| *ok);

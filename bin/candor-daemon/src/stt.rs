@@ -227,6 +227,28 @@ pub async fn transcribe_mic() -> Result<String, SttError> {
     Ok(text)
 }
 
+/// Record and transcribe with an explicit duration override.
+///
+/// Temporarily sets `CANDOR_RECORD_SECONDS` so `record_audio()` picks it up.
+pub async fn transcribe_mic_with_duration(duration: u64) -> Result<String, SttError> {
+    let backend = backend();
+    if *backend == WhisperBackend::Unavailable {
+        return Err(SttError::Unavailable);
+    }
+
+    // Override duration via env var for this call.
+    let prev = std::env::var("CANDOR_RECORD_SECONDS").ok();
+    // SAFETY: Single-threaded context — no concurrent env access.
+    unsafe { std::env::set_var("CANDOR_RECORD_SECONDS", duration.to_string()); }
+    let result = transcribe_mic().await;
+    // Restore previous value.
+    match prev {
+        Some(v) => unsafe { std::env::set_var("CANDOR_RECORD_SECONDS", v); },
+        None => unsafe { std::env::remove_var("CANDOR_RECORD_SECONDS"); },
+    }
+    result
+}
+
 /// Helper: find a binary on PATH.
 fn find_on_path(name: &str) -> Option<PathBuf> {
     std::env::var_os("PATH")

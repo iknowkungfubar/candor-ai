@@ -193,6 +193,7 @@ pub async fn run_chat(
 /// - Each non-empty line is treated as a task
 /// - Phase transitions are printed (machine-parseable)
 /// - EOF (/dev/null close) exits gracefully
+#[allow(dead_code)]
 pub async fn run_listen(
     orchestrator: Arc<Mutex<OrchestratorEngine>>,
 ) -> Result<(), Box<dyn std::error::Error>> {
@@ -295,8 +296,8 @@ async fn run_task_with_streaming(
 
         // ── Detect phase transitions ──
         let current_phase = s.current_phase.clone();
-        if current_phase != last_phase {
-            if let Some(ref phase_name) = current_phase {
+        if current_phase != last_phase
+            && let Some(ref phase_name) = current_phase {
                 let now = Local::now();
                 let elapsed = phase_start_times
                     .last()
@@ -316,7 +317,6 @@ async fn run_task_with_streaming(
                 phase_start_times.push((phase_name.clone(), now));
                 last_phase = current_phase;
             }
-        }
 
         // ── Print new execution log entries (non-phase events) ──
         if s.execution_log.len() > last_log_len {
@@ -349,7 +349,7 @@ async fn run_task_with_streaming(
 
     // ── Await the result ──
     let result = agent_handle.await.map_err(|e| {
-        std::io::Error::new(std::io::ErrorKind::Other, format!("Agent task panicked: {e}"))
+        std::io::Error::other(format!("Agent task panicked: {e}"))
     })?;
 
     // ── Build summary ──
@@ -374,8 +374,7 @@ async fn run_task_with_streaming(
             events_shown: format!("{log_len} events"),
             log_preview,
         }),
-        Err(e) => Err(Box::new(std::io::Error::new(
-            std::io::ErrorKind::Other,
+        Err(e) => Err(Box::new(std::io::Error::other(
             e.to_string(),
         ))),
     }
@@ -421,8 +420,8 @@ fn print_log_event(event: &str) {
 
 fn extract_time(event: &str) -> String {
     // Format: "[2026-05-30T12:34:56+00:00] message"
-    if event.starts_with('[') {
-        if let Some(end) = event.find(']') {
+    if event.starts_with('[')
+        && let Some(end) = event.find(']') {
             let full = &event[1..end];
             // full is like "2026-05-30T12:34:56+00:00" or "2026-05-30T12:34:56Z"
             if let Some(t_pos) = full.find('T') {
@@ -433,7 +432,6 @@ fn extract_time(event: &str) -> String {
                 }
             }
         }
-    }
     "--:--:--".to_string()
 }
 

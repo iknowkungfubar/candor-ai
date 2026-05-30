@@ -258,7 +258,6 @@ fn load_and_parse_isa(path: &Path) -> (String, Vec<String>, Vec<String>) {
 fn extract_header_content(header: &str, skip_keywords: &[&str]) -> String {
     let mut parts: Vec<&str> = header
         .trim_start_matches('#')
-        .trim()
         .split_whitespace()
         .filter(|word| {
             let lower = word.trim_matches(|c: char| c.is_ascii_punctuation()).to_lowercase();

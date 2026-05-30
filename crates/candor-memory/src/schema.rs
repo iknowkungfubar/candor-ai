@@ -3,7 +3,7 @@
 /// Defines tables, fields, and indexes used by MemorySystem.
 /// The HNSW index uses a dimensionality matching the embedding model
 /// (384 for AllMiniLML6V2Q, the default).
-
+///
 /// SurrealDB queries that define the database schema.
 ///
 /// Returns the raw SurrealQL queries to execute during initialization.

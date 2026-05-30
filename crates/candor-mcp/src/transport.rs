@@ -1,5 +1,5 @@
 /// MCP transport layer: stdio and HTTP.
-
+///
 /// Supported MCP transport types.
 #[derive(Debug, Clone)]
 pub enum McpTransport {
@@ -143,8 +143,8 @@ impl Transport for HttpTransport {
 pub fn parse_transport(conn_str: &str) -> Option<Box<dyn Transport>> {
     if conn_str.starts_with("http://") || conn_str.starts_with("https://") {
         Some(Box::new(HttpTransport::new(conn_str.to_string())))
-    } else if conn_str.starts_with("stdio:") {
-        let parts: Vec<&str> = conn_str[6..].split_whitespace().collect();
+    } else if let Some(rest) = conn_str.strip_prefix("stdio:") {
+        let parts: Vec<&str> = rest.split_whitespace().collect();
         if let Some((cmd, args)) = parts.split_first() {
             Some(Box::new(StdioTransport::new(
                 cmd.to_string(),

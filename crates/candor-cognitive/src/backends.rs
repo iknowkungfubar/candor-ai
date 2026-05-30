@@ -204,7 +204,7 @@ impl LlmBackend for AnthropicBackend {
 
         let resp = call_with_protection(&self.cb, || {
             let body = body.clone(); let key = self.api_key.clone();
-            let model = model.clone(); let client = self.client.clone();
+            let _model = model.clone(); let client = self.client.clone();
             async move {
                 let r = client.post("https://api.anthropic.com/v1/messages")
                     .header("x-api-key", &key)

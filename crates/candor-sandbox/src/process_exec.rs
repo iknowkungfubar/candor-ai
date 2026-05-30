@@ -65,6 +65,7 @@ pub struct ProcessBackend {
     /// Whether seatbelt (macOS) is available.
     seatbelt_available: bool,
     /// The sandbox type to use.
+    #[allow(dead_code)]
     sandbox_type: SandboxType,
     /// Scratchpad directory inside the sandbox.
     scratchpad: PathBuf,

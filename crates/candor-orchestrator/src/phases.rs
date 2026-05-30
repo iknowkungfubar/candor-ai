@@ -3,7 +3,6 @@
 /// Each phase is a named node in the petgraph orchestration.
 /// The graph enforces strict sequential progression with no
 /// backward edges that could create infinite loops.
-
 use serde::{Deserialize, Serialize};
 
 /// The canonical seven phases.

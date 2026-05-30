@@ -3,7 +3,6 @@
 /// Persists AgentState after every node transition so that
 /// long-running agents can pause, await human approval, and
 /// resume without losing context.
-
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::Mutex;

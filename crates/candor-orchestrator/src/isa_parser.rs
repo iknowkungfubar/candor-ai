@@ -146,25 +146,25 @@ fn parse_criterion_line(line: &str) -> Option<AcceptanceCriterion> {
         let desc = rest[..paren_idx].trim().to_string();
         let method_str = rest[paren_idx + 1..].trim_end_matches(')').trim();
 
-        let method = if method_str.starts_with("shell:") {
+        let method = if let Some(cmd) = method_str.strip_prefix("shell:") {
             VerificationMethod::ShellCommand {
-                command: method_str[6..].trim().to_string(),
+                command: cmd.trim().to_string(),
             }
-        } else if method_str.starts_with("test:") {
+        } else if let Some(test_name) = method_str.strip_prefix("test:") {
             VerificationMethod::TestCase {
-                test_name: method_str[5..].trim().to_string(),
+                test_name: test_name.trim().to_string(),
             }
-        } else if method_str.starts_with("file:") {
+        } else if let Some(path) = method_str.strip_prefix("file:") {
             VerificationMethod::FileExists {
-                path: method_str[5..].trim().to_string(),
+                path: path.trim().to_string(),
             }
         } else if method_str.starts_with("human") {
             VerificationMethod::HumanConfirmation {
                 prompt: desc.clone(),
             }
-        } else if method_str.starts_with("lint:") {
+        } else if let Some(cmd) = method_str.strip_prefix("lint:") {
             VerificationMethod::LintCheck {
-                command: method_str[5..].trim().to_string(),
+                command: cmd.trim().to_string(),
             }
         } else {
             VerificationMethod::ShellCommand {

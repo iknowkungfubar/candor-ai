@@ -282,7 +282,7 @@ async fn run_cli_task(task: String, orch: Arc<tokio::sync::Mutex<OrchestratorEng
 
 async fn run_voice_task(prompt: Option<String>, _duration: u64) -> Result<(), Box<dyn std::error::Error>> {
     let text = stt::transcribe_mic().await.map_err(|e| {
-        Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Voice error: {e}")))
+        Box::new(std::io::Error::other(format!("Voice error: {e}")))
     })?;
     let task = if let Some(ref p) = prompt {
         format!("{p} {text}")

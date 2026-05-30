@@ -7,7 +7,6 @@
 /// CLI usage:
 ///   candor --voice-task           # record & transcribe, then run as task
 ///   candor --voice-task "prompt"  # pre-seeded task prefix
-
 use std::path::PathBuf;
 use std::process::Stdio;
 

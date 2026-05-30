@@ -75,7 +75,7 @@ fn is_fn_def(line: &str) -> bool {
     }
     // Match `fn name(...` at start (possibly with pub/async/unsafe/extern modifiers)
     let stripped = strip_visibility_and_modifiers(trimmed);
-    stripped.starts_with("fn ") && stripped[3..].trim_start().chars().next().map_or(false, |c| c.is_alphabetic() || c == '_')
+    stripped.starts_with("fn ") && stripped[3..].trim_start().chars().next().is_some_and(|c| c.is_alphabetic() || c == '_')
 }
 
 fn strip_visibility_and_modifiers(s: &str) -> &str {
@@ -91,11 +91,10 @@ fn strip_visibility_and_modifiers(s: &str) -> &str {
             }
         }
         // Also handle pub(in path) etc — simplified: just skip "pub(" ... ")"
-        if s.starts_with("pub(") {
-            if let Some(close) = s.find(')') {
+        if s.starts_with("pub(")
+            && let Some(close) = s.find(')') {
                 s = s[close + 1..].trim_start();
             }
-        }
         if s == before {
             break;
         }
@@ -107,8 +106,8 @@ fn strip_visibility_and_modifiers(s: &str) -> &str {
 fn extract_fn_name(line: &str) -> Option<String> {
     let trimmed = line.trim();
     let stripped = strip_visibility_and_modifiers(trimmed);
-    if stripped.starts_with("fn ") {
-        let after_fn = &stripped[3..].trim_start();
+    if let Some(name_start) = stripped.strip_prefix("fn ") {
+        let after_fn = name_start.trim_start();
         // name is up to '(' or '<' (generics) or ' ' (whitespace before parens in some edge cases)
         if let Some(paren) = after_fn.find('(') {
             let name_candidate = after_fn[..paren].trim();
@@ -306,8 +305,7 @@ fn collect_fn_body<'a>(lines: &'a [&str], def_line: usize) -> Vec<&'a str> {
     let mut brace_depth: i32 = 0;
     let mut in_body = false;
 
-    for i in def_line..lines.len() {
-        let line = lines[i];
+    for (i, line) in lines.iter().copied().enumerate().skip(def_line) {
         for ch in line.chars() {
             if ch == '{' {
                 brace_depth += 1;
@@ -417,12 +415,13 @@ fn check_narration_comments(lines: &[&str]) -> Vec<RuleViolation> {
         }
 
         // Remove comment markers for pattern matching
-        let comment_text = if trimmed.starts_with("//") {
-            &trimmed[2..]
-        } else if trimmed.starts_with("/*") {
-            &trimmed[2..]
-        } else if trimmed.starts_with("*") {
-            &trimmed[1..]
+        let comment_text = if let Some(s) = trimmed.strip_prefix("//") {
+            s
+        } else if let Some(s) = trimmed.strip_prefix("/*") {
+            // strip_prefix on "/*" strips both chars — same as "//" for 2-char prefix
+            s
+        } else if let Some(s) = trimmed.strip_prefix('*') {
+            s
         } else {
             continue;
         };
@@ -465,11 +464,10 @@ pub fn check_ast(source: &str) -> RulesCheck {
     let mut fn_calls: HashMap<String, Vec<usize>> = HashMap::new();
 
     for (i, line) in lines.iter().enumerate() {
-        if is_fn_def(line) {
-            if let Some(name) = extract_fn_name(line) {
+        if is_fn_def(line)
+            && let Some(name) = extract_fn_name(line) {
                 fn_defs.entry(name).or_default().push(i);
             }
-        }
     }
 
     // Phase 1b: Collect defined function names for call detection

@@ -78,7 +78,6 @@ impl WasmBackend {
         // Configure engine with fuel metering.
         let mut config = wasmtime::Config::new();
         config.consume_fuel(true);
-        let _ = config.cache_config_load_default();
 
         let engine = wasmtime::Engine::new(&config).map_err(|e| {
             CoreError::Internal(format!(

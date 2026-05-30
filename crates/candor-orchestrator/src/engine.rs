@@ -615,6 +615,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_run_task() {
+        // Safety guard: prevent RunTestsTool from recursively invoking
+        // this test via `cargo test` during the Verify phase.
+        // SAFETY: Single-threaded test, no concurrent access to this env var.
+        unsafe { std::env::set_var("CANDOR_SKIP_TEST_EXECUTION", "1"); }
+
         let c = Arc::new(CognitiveEngine::new(None, None).await.unwrap());
         let m = Arc::new(MemorySystem::new(384).await.unwrap());
         let mut agent = OrchestratorEngine::new(c, m, 100).await.unwrap();

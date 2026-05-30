@@ -20,6 +20,14 @@ impl Tool for RunTestsTool {
         ctx: &ToolContext,
         args: &[String],
     ) -> Result<ToolOutput, CoreError> {
+        // Safety gate: prevent recursive test invocation. When running
+        // inside the agent's own test suite (CANDOR_SKIP_TEST_EXECUTION=1),
+        // skip actual test execution to avoid infinite recursion.
+        if std::env::var("CANDOR_SKIP_TEST_EXECUTION").is_ok() {
+            info!("CANDOR_SKIP_TEST_EXECUTION set — skipping test run");
+            return Ok(ToolOutput::ok("Skipped (test run guard active)"));
+        }
+
         let test_filter = args.first().cloned();
         let fail_fast = !args.contains(&"--no-fail-fast".to_string());
 

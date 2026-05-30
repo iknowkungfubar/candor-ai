@@ -13,8 +13,6 @@ use candor_graph::node::AgentNode;
 use candor_graph::hooks::LifecycleHooks;
 use candor_memory::store::MemorySystem;
 use candor_orchestrator::OrchestratorEngine;
-use candor_sandbox::ToolSandbox;
-use candor_sentinel::SentinelInterceptor;
 use candor_tools::registry::{Tool, ToolContext, ToolOutput, ToolRegistry};
 
 // ── Property-based: AgentState invariants ──
@@ -46,7 +44,7 @@ fn property_state_compaction_reduces_size() {
 #[test]
 fn property_state_compaction_idempotent() {
     let mut state = AgentState::default();
-    for i in 0..50 {
+    for _i in 0..50 {
         state.append_message("test message content for idempotency check");
     }
     state.compact_context(200);
@@ -192,6 +190,10 @@ fn edge_destructive_action_all_types() {
 
 #[tokio::test]
 async fn integration_full_agent_pipeline_mock() {
+    // SAFETY: Single-threaded test — prevent RunTestsTool from recursively
+    // calling `cargo test` and deadlocking the test suite.
+    unsafe { std::env::set_var("CANDOR_SKIP_TEST_EXECUTION", "1"); }
+
     let cognitive = Arc::new(CognitiveEngine::new(None, None).await.unwrap());
     let memory = Arc::new(MemorySystem::new(384).await.unwrap());
     let mut agent = OrchestratorEngine::new(cognitive, memory, 100).await.unwrap();

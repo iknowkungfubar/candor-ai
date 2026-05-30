@@ -1,10 +1,9 @@
 /// Phase 6 integration tests: trajectory extraction + LoRA fine-tuning.
 use std::path::PathBuf;
 
-use candor_memory::store::MemorySystem;
 use candor_orchestrator::skills::{Skill, extract_skills_from_log, persist_skills};
 use candor_orchestrator::trajectory::{
-    TrajectoryEntry, append_to_jsonl, extract_trajectories, LoRAPipeline,
+    TrajectoryEntry, append_to_jsonl, LoRAPipeline,
 };
 
 // ── Criterion 1: Learn node generates .md skill file ──

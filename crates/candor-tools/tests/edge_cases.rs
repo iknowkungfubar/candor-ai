@@ -1,7 +1,7 @@
 /// SWE-level edge case tests for tools and sandbox.
 use candor_tools::registry::{Tool, ToolContext, ToolOutput, ToolRegistry};
-use candor_tools::{ReadFileTool, WriteFileTool, ListDirTool, SearchCodeTool, SearchFilesTool, RunTestsTool};
-use candor_sandbox::{ToolSandbox, SandboxPolicy};
+use candor_tools::{ReadFileTool, WriteFileTool, ListDirTool};
+use candor_sandbox::SandboxPolicy;
 use candor_sandbox::policy::SandboxPolicyBuilder;
 use candor_sandbox::cross_platform::{CircuitBreaker, Backoff};
 use std::sync::Arc;

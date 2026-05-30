@@ -1,5 +1,4 @@
 /// Tests for MCP transport, client, and bridge modules.
-use std::sync::Arc;
 
 // ── Transport tests ──
 
@@ -58,14 +57,14 @@ fn test_parse_transport_multiple() {
 
 #[test]
 fn test_http_transport_construction() {
-    let transport = candor_mcp::transport::HttpTransport::new("http://localhost:3000".into());
+    let _transport = candor_mcp::transport::HttpTransport::new("http://localhost:3000".into());
     // Just verify it doesn't panic
     assert!(true);
 }
 
 #[test]
 fn test_stdio_transport_construction() {
-    let transport = candor_mcp::transport::StdioTransport::new(
+    let _transport = candor_mcp::transport::StdioTransport::new(
         "echo".into(),
         vec!["test".into()],
     );

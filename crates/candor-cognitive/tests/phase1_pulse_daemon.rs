@@ -1,9 +1,7 @@
 /// Phase 1 integration tests:
 /// - Daemon binds to port 31337
 /// - CognitiveEngine routes between backends
-use candor_cognitive::{CognitiveEngine, LlmBackend, LocalBackend, MockBackend, deterministic_embed};
-use std::net::TcpStream;
-use std::time::Duration;
+use candor_cognitive::{CognitiveEngine, LlmBackend};
 
 #[test]
 fn test_phase1_cognitive_engine_new_with_mock() {

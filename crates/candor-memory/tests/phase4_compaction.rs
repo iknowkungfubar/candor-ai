@@ -1,6 +1,4 @@
 /// Phase 4 integration tests: context compaction + persistence.
-use std::sync::Arc;
-use tokio::sync::Mutex;
 
 use candor_core::state::AgentState;
 use candor_memory::store::MemorySystem;

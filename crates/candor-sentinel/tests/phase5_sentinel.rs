@@ -2,12 +2,11 @@
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
-use candor_core::error::CoreError;
 use candor_core::protocol::{ActionType, AgentAction};
 use candor_core::state::AgentState;
 use candor_sentinel::SentinelInterceptor;
 use candor_sentinel::rules::{
-    enforce_deterministic_rules, check_conventional_commit, RulesCheck, RuleViolation, ViolationSeverity,
+    enforce_deterministic_rules, check_conventional_commit,
 };
 use candor_sentinel::doctrine::enforce_doctrine;
 

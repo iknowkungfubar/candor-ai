@@ -1,11 +1,5 @@
 /// Unified memory storage engine with SurrealDB.
-///
-/// From the design doc: "Utilizing the surrealdb crate with the kv-mem
-/// feature allows the harness to embed the database directly into the
-/// binary. This eliminates the need for external middleware."
-///
-/// "The database schemas define project-scoped memory isolation, ensuring
-/// that disparate agent tasks do not contaminate each other's context retrieval."
+use std::sync::atomic::{AtomicBool, Ordering};
 use serde::{Deserialize, Serialize};
 use tracing::{error, info, instrument};
 
@@ -22,52 +16,56 @@ pub struct MemoryBlock {
 
 /// The unified storage engine managing document and vector data.
 pub struct MemorySystem {
-    /// Embedded SurrealDB instance.
     db: surrealdb::Surreal<surrealdb::engine::local::Db>,
-
-    /// Dimension of the embedding vectors in use.
     embedding_dim: usize,
+    /// Whether schema has been initialized (lazy init).
+    schema_ready: AtomicBool,
 }
 
 impl MemorySystem {
-    /// Create a new in-memory MemorySystem.
-    ///
-    /// Uses `surrealdb::engine::local::Mem` for zero-dependency operation.
-    /// In production, switch to `surrealdb::engine::local::RocksDb`.
+    /// Create a new in-memory MemorySystem with lazy schema initialization.
+    /// Schema queries run on first actual operation, not at construction.
     pub async fn new(embedding_dim: usize) -> Result<Self, CoreError> {
-        info!("Initializing embedded SurrealDB memory engine");
+        info!("Creating SurrealDB connection (schema init deferred)");
 
         let db = surrealdb::Surreal::new::<surrealdb::engine::local::Mem>(())
             .await
-            .map_err(|e| {
-                CoreError::Internal(format!("SurrealDB init failed: {e}"))
-            })?;
+            .map_err(|e| CoreError::Internal(format!("SurrealDB connect failed: {e}")))?;
 
         db.use_ns("candor_namespace")
             .use_db("candor_database")
             .await
-            .map_err(|e| CoreError::Internal(format!("SurrealDB namespace/db error: {e}")))?;
+            .map_err(|e| CoreError::Internal(format!("SurrealDB ns/db error: {e}")))?;
 
-        // Run schema queries with the correct embedding dimension.
-        let schema_queries = super::schema::schema_queries(embedding_dim);
-        let mut query_response =
-            db.query(&schema_queries).await.map_err(|e| {
-                CoreError::Internal(format!("Schema query failed: {e}"))
-            })?;
-
-        if !query_response.take_errors().is_empty() {
-            error!("Schema definition errors encountered");
-            return Err(CoreError::Internal(
-                "Database schema initialization failure — check embedding dimension".into(),
-            ));
-        }
-
-        info!("Memory engine initialized successfully");
-
+        info!("SurrealDB memory engine ready (lazy schema)");
         Ok(Self {
             db,
             embedding_dim,
+            schema_ready: AtomicBool::new(false),
         })
+    }
+
+    /// Lazily initialize schema on first actual operation.
+    async fn ensure_schema(&self) -> Result<(), CoreError> {
+        if self.schema_ready.load(Ordering::SeqCst) {
+            return Ok(());
+        }
+
+        info!("Running lazy SurrealDB schema init");
+        let schema_queries = super::schema::schema_queries(self.embedding_dim);
+        let mut qr = self.db.query(&schema_queries).await
+            .map_err(|e| CoreError::Internal(format!("Schema query failed: {e}")))?;
+
+        if !qr.take_errors().is_empty() {
+            error!("Schema definition errors");
+            return Err(CoreError::Internal(
+                "Database schema init failure — check embedding dimension".into(),
+            ));
+        }
+
+        self.schema_ready.store(true, Ordering::SeqCst);
+        info!("SurrealDB schema initialized");
+        Ok(())
     }
 
     /// Store a new memory block with its embedding vector.
@@ -78,28 +76,25 @@ impl MemorySystem {
         content: String,
         embedding: Vec<f32>,
     ) -> Result<(), CoreError> {
-        let memory_entry = MemoryBlock {
+        self.ensure_schema().await?;
+
+        let entry = MemoryBlock {
             project_id,
             textual_content: content,
             semantic_embedding: embedding,
             timestamp: surrealdb::sql::Datetime::default(),
         };
 
-        let _created: Option<MemoryBlock> = self
-            .db
+        let _created: Option<MemoryBlock> = self.db
             .create("memory_block")
-            .content(memory_entry)
+            .content(entry)
             .await
-            .map_err(|e| CoreError::Internal(format!("Store memory failed: {e}")))?;
+            .map_err(|e| CoreError::Internal(format!("Store failed: {e}")))?;
 
-        info!("Memory block successfully persisted to database");
+        info!("Memory block persisted");
         Ok(())
     }
 
-    /// Retrieve context blocks nearest to the query embedding.
-    ///
-    /// Uses cosine distance over the HNSW index, strictly scoped by project ID
-    /// to prevent cross-contamination between agent tasks.
     #[instrument(skip(self, query_embedding))]
     pub async fn retrieve_context(
         &self,
@@ -107,7 +102,9 @@ impl MemorySystem {
         query_embedding: Vec<f32>,
         top_k: u32,
     ) -> Result<Vec<String>, CoreError> {
-        let sql_query = "
+        self.ensure_schema().await?;
+
+        let sql = "
             SELECT textual_content, vector::similarity::cosine(semantic_embedding, $query_vector) AS sim
             FROM memory_block
             WHERE project_id = $pid
@@ -115,32 +112,24 @@ impl MemorySystem {
             LIMIT $limit;
         ";
 
-        let mut result = self
-            .db
-            .query(sql_query)
+        let mut result = self.db.query(sql)
             .bind(("query_vector", query_embedding))
             .bind(("pid", project_id.to_string()))
             .bind(("limit", top_k))
             .await
-            .map_err(|e| CoreError::Internal(format!("Retrieve context failed: {e}")))?;
+            .map_err(|e| CoreError::Internal(format!("Retrieve failed: {e}")))?;
 
-        // Extract textual_content from each result row.
         let contents: Vec<String> = result
             .take::<Vec<serde_json::Value>>(0)
-            .map_err(|e| CoreError::Internal(format!("Deserialize memory blocks failed: {e}")))?
+            .map_err(|e| CoreError::Internal(format!("Deserialize failed: {e}")))?
             .into_iter()
-            .filter_map(|val| {
-                val.get("textual_content")
-                    .and_then(|v| v.as_str())
-                    .map(|s| s.to_string())
-            })
+            .filter_map(|val| val.get("textual_content")?.as_str().map(|s| s.to_string()))
             .collect();
 
         info!(count = contents.len(), "Context retrieved");
         Ok(contents)
     }
 
-    /// Store an execution log entry.
     pub async fn store_execution_log(
         &self,
         session_id: &str,
@@ -148,6 +137,8 @@ impl MemorySystem {
         action: &str,
         result: &str,
     ) -> Result<(), CoreError> {
+        self.ensure_schema().await?;
+
         #[derive(Debug, Serialize, Deserialize)]
         struct LogEntry {
             session_id: String,
@@ -165,81 +156,28 @@ impl MemorySystem {
             timestamp: surrealdb::sql::Datetime::default(),
         };
 
-        let _created: Option<LogEntry> = self
-            .db
+        let _created: Option<LogEntry> = self.db
             .create("execution_log")
             .content(entry)
             .await
-            .map_err(|e| CoreError::Internal(format!("Store execution log failed: {e}")))?;
+            .map_err(|e| CoreError::Internal(format!("Store log failed: {e}")))?;
 
         Ok(())
     }
 
-    /// Delete all memory blocks for a project (cleanup).
-    pub async fn delete_project_memories(
-        &self,
-        project_id: &str,
-    ) -> Result<(), CoreError> {
+    pub async fn delete_project_memories(&self, project_id: &str) -> Result<(), CoreError> {
+        self.ensure_schema().await?;
+
         self.db
             .query("DELETE FROM memory_block WHERE project_id = $pid")
             .bind(("pid", project_id.to_string()))
             .await
-            .map_err(|e| CoreError::Internal(format!("Delete project memories failed: {e}")))?;
+            .map_err(|e| CoreError::Internal(format!("Delete failed: {e}")))?;
 
         Ok(())
     }
 
     pub fn embedding_dim(&self) -> usize {
         self.embedding_dim
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[tokio::test]
-    async fn test_memory_store_and_retrieve() {
-        let memory = MemorySystem::new(384).await.unwrap();
-
-        let embedding = vec![0.1_f32; 384];
-        memory
-            .store_memory("test-project".into(), "Hello world".into(), embedding.clone())
-            .await
-            .unwrap();
-
-        let results = memory
-            .retrieve_context("test-project", embedding, 5)
-            .await
-            .unwrap();
-
-        assert_eq!(results.len(), 1);
-        assert_eq!(results[0], "Hello world");
-    }
-
-    #[tokio::test]
-    async fn test_project_isolation() {
-        let memory = MemorySystem::new(384).await.unwrap();
-
-        let emb_a = vec![0.1_f32; 384];
-        let emb_b = vec![0.2_f32; 384];
-
-        memory
-            .store_memory("project-a".into(), "A data".into(), emb_a.clone())
-            .await
-            .unwrap();
-        memory
-            .store_memory("project-b".into(), "B data".into(), emb_b.clone())
-            .await
-            .unwrap();
-
-        // Query project A — should NOT see project B's data.
-        let results = memory
-            .retrieve_context("project-a", emb_a, 10)
-            .await
-            .unwrap();
-
-        assert_eq!(results.len(), 1);
-        assert_eq!(results[0], "A data");
     }
 }

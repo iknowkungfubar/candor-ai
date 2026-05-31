@@ -31,6 +31,8 @@ mod routes;
 mod stt;
 mod tts;
 mod util;
+mod pda;
+mod agents;
 
 /// Candor AI — Lawful Good, Rust-native Agentic Operating System.
 #[derive(Parser, Debug)]
@@ -117,6 +119,43 @@ enum Commands {
 
     /// Run diagnostics
     Doctor,
+
+    /// Personal Digital Assistant — manage your identity, memory, and agents
+    Pda {
+        #[command(subcommand)]
+        action: PdaAction,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+enum PdaAction {
+    /// Initialize ~/.candor/ home directory with default files
+    Init,
+    /// Show PDA status
+    Status,
+    /// Read or update IDENTITY.md
+    Identity {
+        #[arg(short, long, help = "New identity content (if not provided, reads current)")]
+        set: Option<String>,
+    },
+    /// Read or update DA_IDENTITY.md
+    DaIdentity {
+        #[arg(short, long, help = "New DA identity content (if not provided, reads current)")]
+        set: Option<String>,
+    },
+    /// List active work sessions
+    Work,
+    /// Start a new work session
+    WorkStart {
+        /// Unique slug for the work session (e.g., "build-pda-dashboard")
+        slug: String,
+        /// Goal description
+        goal: String,
+    },
+    /// Generate a morning digest (uses LLM for briefing)
+    Digest,
+    /// Run PDA monitor scan
+    Monitor,
 }
 
 #[derive(Clone)]
@@ -198,6 +237,111 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         Commands::Doctor => {
             run_doctor().await;
+        }
+        Commands::Pda { action } => {
+            println!("{CYAN}{BOLD}   Candor PDA{RESET}\n");
+            match action {
+                PdaAction::Init => {
+                    pda::init().await.map_err(|e| Box::new(std::io::Error::other(format!("{e}"))))?;
+                    println!("  {GREEN}✅ PDA initialized at ~/.candor/{RESET}");
+                    println!("  Edit IDENTITY.md and DA_IDENTITY.md to personalize.");
+                }
+                PdaAction::Status => {
+                    let status = pda::status().await.map_err(|e| Box::new(std::io::Error::other(format!("{e}"))))?;
+                    println!("{status}");
+                }
+                PdaAction::Identity { set } => {
+                    if let Some(content) = set {
+                        tokio::fs::write(pda::identity_path(), &content).await?;
+                        pda::auto_commit("update IDENTITY.md").await.ok();
+                        println!("  {GREEN}✅ IDENTITY.md updated{RESET}");
+                    } else {
+                        let content = pda::read_identity().await
+                            .map_err(|e| Box::new(std::io::Error::other(format!("{e}"))))?;
+                        println!("{content}");
+                    }
+                }
+                PdaAction::DaIdentity { set } => {
+                    if let Some(content) = set {
+                        tokio::fs::write(pda::da_identity_path(), &content).await?;
+                        pda::auto_commit("update DA_IDENTITY.md").await.ok();
+                        println!("  {GREEN}✅ DA_IDENTITY.md updated{RESET}");
+                    } else {
+                        let content = pda::read_da_identity().await
+                            .map_err(|e| Box::new(std::io::Error::other(format!("{e}"))))?;
+                        println!("{content}");
+                    }
+                }
+                PdaAction::Work => {
+                    let slugs = pda::list_work().await
+                        .map_err(|e| Box::new(std::io::Error::other(format!("{e}"))))?;
+                    if slugs.is_empty() {
+                        println!("  {YELLOW}No active work sessions.{RESET}");
+                        println!("  Start one: candor pda work-start <slug> <goal>");
+                    } else {
+                        println!("{BOLD}Active Work Sessions:{RESET}");
+                        for slug in slugs {
+                            println!("  • {slug}");
+                        }
+                    }
+                }
+                PdaAction::WorkStart { slug, goal } => {
+                    pda::start_work(&slug, &goal).await
+                        .map_err(|e| Box::new(std::io::Error::other(format!("{e}"))))?;
+                    println!("  {GREEN}✅ Work session '{slug}' started.{RESET}");
+                }
+                PdaAction::Digest => {
+                    let prompt = agents::morning_digest_prompt().await
+                        .map_err(|e| Box::new(std::io::Error::other(e)))?;
+                    println!("{BOLD}Generating morning digest…{RESET}");
+                    let cognitive = build_cognitive(None, None, None, None).await?;
+                    let request = candor_cognitive::LlmRequest {
+                        system_prompt: Some(prompt),
+                        prompt: "Generate a brief morning digest based on my PDA state.".into(),
+                        max_tokens: Some(512),
+                        temperature: Some(0.7),
+                        stream: false,
+                        model_override: None,
+                    };
+                    match cognitive.generate(&request).await {
+                        Ok(response) => {
+                            println!("\n{CYAN}{BOLD}Morning Digest{RESET}\n");
+                            println!("{response}");
+                            // Speak the digest via TTS if available.
+                            if tts::is_available() {
+                                println!("\n  {YELLOW}🔊 Speaking digest…{RESET}");
+                                let _ = tts::speak(&response).await;
+                            }
+                        }
+                        Err(e) => {
+                            eprintln!("  {RED}LLM error: {e}{RESET}");
+                        }
+                    }
+                }
+                PdaAction::Monitor => {
+                    let prompt = agents::monitor_prompt().await
+                        .map_err(|e| Box::new(std::io::Error::other(e)))?;
+                    println!("{BOLD}Running PDA monitor scan…{RESET}");
+                    let cognitive = build_cognitive(None, None, None, None).await?;
+                    let request = candor_cognitive::LlmRequest {
+                        system_prompt: Some(prompt),
+                        prompt: "Scan my PDA state and suggest actions.".into(),
+                        max_tokens: Some(512),
+                        temperature: Some(0.5),
+                        stream: false,
+                        model_override: None,
+                    };
+                    match cognitive.generate(&request).await {
+                        Ok(response) => {
+                            println!("\n{CYAN}{BOLD}PDA Monitor{RESET}\n");
+                            println!("{response}");
+                        }
+                        Err(e) => {
+                            eprintln!("  {RED}LLM error: {e}{RESET}");
+                        }
+                    }
+                }
+            }
         }
     }
     Ok(())

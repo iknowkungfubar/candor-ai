@@ -607,6 +607,23 @@ async fn run_health_check(orch: Arc<tokio::sync::Mutex<OrchestratorEngine>>) {
 
 // ── Doctor diagnostics ──
 
+/// Check if a newer version of Candor is available on GitHub.
+async fn check_version() -> Option<String> {
+    let current = env!("CARGO_PKG_VERSION");
+    let url = "https://api.github.com/repos/iknowkungfubar/candor-ai/releases/latest";
+    let client = reqwest::Client::builder()
+        .user_agent("candor-ai-doctor")
+        .build().ok()?;
+    let resp = client.get(url).send().await.ok()?;
+    let json: serde_json::Value = resp.json().await.ok()?;
+    let latest = json.get("tag_name")?.as_str()?.trim_start_matches('v');
+    if latest != current {
+        Some(format!("{current} → {latest}"))
+    } else {
+        None
+    }
+}
+
 async fn run_doctor() {
     println!("\n{BOLD}Candor AI — Doctor{RESET}\n");
 
@@ -625,6 +642,12 @@ async fn run_doctor() {
     let all_ok = checks.iter().all(|(_, ok)| *ok);
     for (name, ok) in &checks {
         println!("  {} {name}", if *ok { format!("{GREEN}✓{RESET}") } else { format!("{YELLOW}○{RESET}") });
+    }
+    println!();
+    // Version check
+    match check_version().await {
+        Some(update) => println!("  {YELLOW}⚠ Update available: {update}{RESET}"),
+        None => println!("  {GREEN}✓ Up to date (v{}){RESET}", env!("CARGO_PKG_VERSION")),
     }
     println!();
     if all_ok {

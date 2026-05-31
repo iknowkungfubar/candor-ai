@@ -4,13 +4,13 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-candor-core = { path = "../candor-core" }
-candor-tools = { path = "../candor-tools" }
-candor-graph = { path = "../candor-graph" }
-candor-sandbox = { path = "../candor-sandbox" }
-candor-cognitive = { path = "../candor-cognitive" }
-candor-memory = { path = "../candor-memory" }
-candor-sentinel = { path = "../candor-sentinel" }
+candor-core = { workspace = true }
+candor-tools = { workspace = true }
+candor-graph = { workspace = true }
+candor-sandbox = { workspace = true }
+candor-cognitive = { workspace = true }
+candor-memory = { workspace = true }
+candor-sentinel = { workspace = true }
 tokio = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

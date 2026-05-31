@@ -9,8 +9,8 @@ vulkan = []
 cuda = []
 
 [dependencies]
-candor-core = { path = "../candor-core" }
-candor-sandbox = { path = "../candor-sandbox" }
+candor-core = { workspace = true }
+candor-sandbox = { workspace = true }
 tokio = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

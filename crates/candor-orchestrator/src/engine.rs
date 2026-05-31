@@ -129,6 +129,27 @@ impl OrchestratorEngine {
                     da_identity
                 ));
             }
+
+            // Inject prior learnings from PDA file-based memory into context.
+            let learning_dir = dirs_or_default().join("MEMORY").join("LEARNING");
+            if learning_dir.is_dir() {
+                let mut entries: Vec<String> = Vec::new();
+                if let Ok(read_dir) = std::fs::read_dir(&learning_dir) {
+                    for entry in read_dir.flatten() {
+                        let path = entry.path();
+                        if path.extension().and_then(|e| e.to_str()) == Some("md")
+                            && let Ok(content) = std::fs::read_to_string(&path) {
+                                entries.push(content);
+                            }
+                    }
+                }
+                if !entries.is_empty() {
+                    s.append_message(&format!(
+                        "## Prior Learnings\n\n{}",
+                        entries.join("\n\n---\n\n")
+                    ));
+                }
+            }
         }
 
         let start = self.build_graph()?;
@@ -199,6 +220,34 @@ impl OrchestratorEngine {
                 self.memory.store_execution_log(
                     &self.session_id, "complete", "task", task,
                 ).await?;
+
+                // Store a learning entry in PDA file-based memory.
+                {
+                    let state_arc = self.graph_runner.state();
+                    let s = state_arc.lock().await;
+                    let slug = slugify(&s.active_task);
+                    let learning_content = format!(
+                        "# Learning: {}\n\n## Task\n{}\n\n## Key Events\n{}",
+                        s.active_task,
+                        s.active_task,
+                        s.execution_log
+                            .iter()
+                            .rev()
+                            .take(30)
+                            .cloned()
+                            .collect::<Vec<_>>()
+                            .join("\n"),
+                    );
+                    let learning_path = dirs_or_default()
+                        .join("MEMORY")
+                        .join("LEARNING")
+                        .join(format!("{}.md", slug));
+                    if let Some(parent) = learning_path.parent() {
+                        let _ = std::fs::create_dir_all(parent);
+                    }
+                    let _ = tokio::fs::write(&learning_path, &learning_content).await;
+                }
+
                 Ok(())
             }
             Err(e) => {
@@ -625,6 +674,20 @@ fn dirs_or_default() -> PathBuf {
     } else {
         PathBuf::from("/tmp/candor")
     }
+}
+
+/// Convert a string into a filesystem-safe slug.
+/// Replaces spaces with hyphens, removes other non-alphanumeric chars.
+fn slugify(s: &str) -> String {
+    s.to_lowercase()
+        .chars()
+        .map(|c| if c.is_alphanumeric() || c == '-' || c == '_' { c } else { ' ' })
+        .collect::<String>()
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join("-")
+        .trim_matches('-')
+        .to_string()
 }
 
 // ── Tests ──

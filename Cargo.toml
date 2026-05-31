@@ -17,11 +17,27 @@ members = [
 [workspace.package]
 version = "1.0.0"
 edition = "2024"
-authors = ["Candor AI"]
+authors = ["Candor AI <candor@nousresearch.com>"]
 license = "MIT"
 repository = "https://github.com/iknowkungfubar/candor-ai"
+description = "Lawful Good Rust Agentic Operating System — 7-phase agent with voice, PDA, memory"
+readme = "README.md"
+keywords = ["agent", "ai", "llm", "automation", "pda"]
+categories = ["command-line-utilities", "development-tools"]
 
 [workspace.dependencies]
+# Internal crates — path for local dev, version for crates.io
+candor-core = { path = "crates/candor-core", version = "1.0" }
+candor-graph = { path = "crates/candor-graph", version = "1.0" }
+candor-sandbox = { path = "crates/candor-sandbox", version = "1.0" }
+candor-cognitive = { path = "crates/candor-cognitive", version = "1.0" }
+candor-memory = { path = "crates/candor-memory", version = "1.0" }
+candor-sentinel = { path = "crates/candor-sentinel", version = "1.0" }
+candor-orchestrator = { path = "crates/candor-orchestrator", version = "1.0" }
+candor-tools = { path = "crates/candor-tools", version = "1.0" }
+candor-mcp = { path = "crates/candor-mcp", version = "1.0" }
+candor-telemetry = { path = "crates/candor-telemetry", version = "1.0" }
+
 # Async runtime — trimmed to features actually used
 tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros", "sync", "time", "net", "process", "fs", "io-util", "signal"] }
 

@@ -8,14 +8,14 @@ name = "candor"
 path = "src/main.rs"
 
 [dependencies]
-candor-core = { path = "../../crates/candor-core" }
-candor-graph = { path = "../../crates/candor-graph" }
-candor-sandbox = { path = "../../crates/candor-sandbox" }
-candor-cognitive = { path = "../../crates/candor-cognitive" }
-candor-memory = { path = "../../crates/candor-memory" }
-candor-sentinel = { path = "../../crates/candor-sentinel" }
-candor-orchestrator = { path = "../../crates/candor-orchestrator" }
-candor-telemetry = { path = "../../crates/candor-telemetry" }
+candor-core = { workspace = true }
+candor-graph = { workspace = true }
+candor-sandbox = { workspace = true }
+candor-cognitive = { workspace = true }
+candor-memory = { workspace = true }
+candor-sentinel = { workspace = true }
+candor-orchestrator = { workspace = true }
+candor-telemetry = { workspace = true }
 tokio = { workspace = true }
 axum = { workspace = true }
 tower = { workspace = true }
@@ -31,3 +31,4 @@ opentelemetry_sdk = { workspace = true }
 anyhow = { workspace = true }
 uuid = { workspace = true }
 chrono = { workspace = true }
+reqwest = { workspace = true }

@@ -4,8 +4,8 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-candor-core = { path = "../candor-core" }
-candor-cognitive = { path = "../candor-cognitive" }
+candor-core = { workspace = true }
+candor-cognitive = { workspace = true }
 tokio = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

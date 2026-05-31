@@ -82,7 +82,10 @@ impl TextEmbedding {
         // For scaffold: we create a placeholder that returns zero vectors.
         let dimension = opts.model.dimension();
 
-        Ok(Self { model: opts.model, dimension })
+        Ok(Self {
+            model: opts.model,
+            dimension,
+        })
     }
 
     /// Generate a single embedding vector from text.

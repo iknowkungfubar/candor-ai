@@ -139,12 +139,13 @@ impl CircuitBreaker {
                 // Check if reset timeout has elapsed
                 if let Ok(guard) = self.last_failure.lock()
                     && let Some(last) = *guard
-                        && last.elapsed() >= self.reset_timeout {
-                            // Transition to half-open
-                            self.state.store(2, std::sync::atomic::Ordering::SeqCst);
-                            info!("Circuit breaker: open → half-open");
-                            return Ok(());
-                        }
+                    && last.elapsed() >= self.reset_timeout
+                {
+                    // Transition to half-open
+                    self.state.store(2, std::sync::atomic::Ordering::SeqCst);
+                    info!("Circuit breaker: open → half-open");
+                    return Ok(());
+                }
                 Err(CoreError::Internal(
                     "Circuit breaker is open — API calls suspended".into(),
                 ))
@@ -154,13 +155,17 @@ impl CircuitBreaker {
 
     /// Record a successful call.
     pub fn record_success(&self) {
-        self.failure_count.store(0, std::sync::atomic::Ordering::SeqCst);
+        self.failure_count
+            .store(0, std::sync::atomic::Ordering::SeqCst);
         self.state.store(0, std::sync::atomic::Ordering::SeqCst);
     }
 
     /// Record a failed call.
     pub fn record_failure(&self) {
-        let count = self.failure_count.fetch_add(1, std::sync::atomic::Ordering::SeqCst) + 1;
+        let count = self
+            .failure_count
+            .fetch_add(1, std::sync::atomic::Ordering::SeqCst)
+            + 1;
         if let Ok(mut guard) = self.last_failure.lock() {
             *guard = Some(std::time::Instant::now());
         }
@@ -200,9 +205,7 @@ impl Backoff {
     pub fn next_delay(&mut self) -> Duration {
         let delay = self.current;
         self.current = std::cmp::min(
-            Duration::from_secs_f64(
-                self.current.as_secs_f64() * self.multiplier,
-            ),
+            Duration::from_secs_f64(self.current.as_secs_f64() * self.multiplier),
             self.max,
         );
         delay
@@ -249,9 +252,7 @@ where
         }
     }
 
-    Err(last_error.unwrap_or_else(|| {
-        CoreError::Internal("Retry exhausted with no error".into())
-    }))
+    Err(last_error.unwrap_or_else(|| CoreError::Internal("Retry exhausted with no error".into())))
 }
 
 #[cfg(test)]
@@ -291,10 +292,7 @@ mod tests {
 
     #[test]
     fn test_backoff_exponential() {
-        let mut backoff = Backoff::new(
-            Duration::from_millis(10),
-            Duration::from_secs(1),
-        );
+        let mut backoff = Backoff::new(Duration::from_millis(10), Duration::from_secs(1));
         let d1 = backoff.next_delay();
         let d2 = backoff.next_delay();
         assert!(d2 > d1);

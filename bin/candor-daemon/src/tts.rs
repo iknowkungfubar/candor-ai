@@ -1,3 +1,4 @@
+use super::util::find_on_path;
 /// Text-to-Speech module for Candor AI.
 ///
 /// Uses only open-source backends:
@@ -9,7 +10,6 @@
 /// Set `CANDOR_AUDIO_OUTPUT` to override the playback device (default: "default").
 use std::path::PathBuf;
 use std::process::Stdio;
-use super::util::find_on_path;
 
 /// Supported TTS backends, probed at runtime.
 #[derive(Debug, Clone, PartialEq)]
@@ -64,8 +64,8 @@ impl TtsBackend {
                     None => "en_US-lessac-medium",
                 };
 
-                let device = std::env::var("CANDOR_AUDIO_OUTPUT")
-                    .unwrap_or_else(|_| "default".into());
+                let device =
+                    std::env::var("CANDOR_AUDIO_OUTPUT").unwrap_or_else(|_| "default".into());
 
                 // Stage 1: Piper generates raw PCM audio.
                 let mut piper = tokio::process::Command::new(path)
@@ -100,9 +100,7 @@ impl TtsBackend {
                 }
 
                 if pcm_data.stdout.is_empty() {
-                    return Err(TtsError::Backend(
-                        "piper produced no audio output".into(),
-                    ));
+                    return Err(TtsError::Backend("piper produced no audio output".into()));
                 }
 
                 // Stage 2: Pipe raw PCM through aplay.
@@ -147,8 +145,8 @@ impl TtsBackend {
                 // espeak-ng pipeline:
                 //   espeak-ng "text" --stdout | aplay
                 let voice = std::env::var("CANDOR_TTS_VOICE").unwrap_or_else(|_| "en-us".into());
-                let device = std::env::var("CANDOR_AUDIO_OUTPUT")
-                    .unwrap_or_else(|_| "default".into());
+                let device =
+                    std::env::var("CANDOR_AUDIO_OUTPUT").unwrap_or_else(|_| "default".into());
 
                 // espeak-ng generates WAV on stdout.
                 let output = tokio::process::Command::new(path)
@@ -216,14 +214,13 @@ impl TtsBackend {
     fn resolve_piper_model() -> Option<String> {
         // Check env var first.
         if let Ok(path) = std::env::var("CANDOR_TTS_MODEL")
-            && std::path::Path::new(&path).exists() {
-                return Some(path);
-            }
+            && std::path::Path::new(&path).exists()
+        {
+            return Some(path);
+        }
 
         // Check common installation paths.
-        let candidates = [
-            dirs_or_defaults(),
-        ];
+        let candidates = [dirs_or_defaults()];
 
         for base in &candidates {
             for variant in &[

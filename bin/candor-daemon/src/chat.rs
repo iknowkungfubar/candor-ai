@@ -33,13 +33,37 @@ const RESET: &str = "\x1b[0m";
 
 /// Phase display metadata: (name, icon, description)
 const PHASES: &[(&str, &str, &str)] = &[
-    ("Observe", "🔍", "Scanning project context and gathering information..."),
-    ("Think",   "🧠", "Reasoning about the problem and analyzing context..."),
-    ("Plan",    "📋", "Designing a step-by-step implementation plan..."),
-    ("Build",   "🔧", "Writing code and generating artifacts..."),
-    ("Execute", "⚡", "Running build, compiling, and performing actions..."),
-    ("Verify",  "✅", "Verifying outputs against acceptance criteria..."),
-    ("Learn",   "📝", "Documenting results and storing in memory..."),
+    (
+        "Observe",
+        "🔍",
+        "Scanning project context and gathering information...",
+    ),
+    (
+        "Think",
+        "🧠",
+        "Reasoning about the problem and analyzing context...",
+    ),
+    (
+        "Plan",
+        "📋",
+        "Designing a step-by-step implementation plan...",
+    ),
+    ("Build", "🔧", "Writing code and generating artifacts..."),
+    (
+        "Execute",
+        "⚡",
+        "Running build, compiling, and performing actions...",
+    ),
+    (
+        "Verify",
+        "✅",
+        "Verifying outputs against acceptance criteria...",
+    ),
+    (
+        "Learn",
+        "📝",
+        "Documenting results and storing in memory...",
+    ),
 ];
 
 /// O(1) phase index lookup by name.
@@ -174,9 +198,7 @@ pub async fn run_chat(
                 }
             }
             Err(e) => {
-                eprintln!(
-                    "\n {RED}{BOLD}✗ Task failed:{RESET} {e}\n"
-                );
+                eprintln!("\n {RED}{BOLD}✗ Task failed:{RESET} {e}\n");
             }
         }
     }
@@ -297,33 +319,33 @@ async fn run_task_with_streaming(
         // ── Detect phase transitions ──
         let current_phase = s.current_phase.clone();
         if current_phase != last_phase
-            && let Some(ref phase_name) = current_phase {
-                let now = Local::now();
-                let elapsed = phase_start_times
-                    .last()
-                    .map(|(_, t)| {
-                        let d = now - *t;
-                        format_duration(d.num_seconds().max(0) as u64)
-                    })
-                    .unwrap_or_else(|| "0s".into());
+            && let Some(ref phase_name) = current_phase
+        {
+            let now = Local::now();
+            let elapsed = phase_start_times
+                .last()
+                .map(|(_, t)| {
+                    let d = now - *t;
+                    format_duration(d.num_seconds().max(0) as u64)
+                })
+                .unwrap_or_else(|| "0s".into());
 
-                // Mark the previous phase as complete with timing
-                if let Some(ref prev) = last_phase {
-                    print_phase_complete(prev, &elapsed);
-                }
-
-                // Print the new phase header
-                print_phase_start(phase_name);
-                phase_start_times.push((phase_name.clone(), now));
-                last_phase = current_phase;
+            // Mark the previous phase as complete with timing
+            if let Some(ref prev) = last_phase {
+                print_phase_complete(prev, &elapsed);
             }
+
+            // Print the new phase header
+            print_phase_start(phase_name);
+            phase_start_times.push((phase_name.clone(), now));
+            last_phase = current_phase;
+        }
 
         // ── Print new execution log entries (non-phase events) ──
         if s.execution_log.len() > last_log_len {
             for event in &s.execution_log[last_log_len..] {
                 // Skip the events that are phase-logged (we handle those via current_phase)
-                let is_phase_event = event.contains("Phase: ")
-                    || event.contains("Phase: complete");
+                let is_phase_event = event.contains("Phase: ") || event.contains("Phase: complete");
                 if !is_phase_event {
                     print_log_event(event);
                 }
@@ -348,9 +370,9 @@ async fn run_task_with_streaming(
     }
 
     // ── Await the result ──
-    let result = agent_handle.await.map_err(|e| {
-        std::io::Error::other(format!("Agent task panicked: {e}"))
-    })?;
+    let result = agent_handle
+        .await
+        .map_err(|e| std::io::Error::other(format!("Agent task panicked: {e}")))?;
 
     // ── Build summary ──
     let s = state_handle.lock().await;
@@ -374,9 +396,7 @@ async fn run_task_with_streaming(
             events_shown: format!("{log_len} events"),
             log_preview,
         }),
-        Err(e) => Err(Box::new(std::io::Error::other(
-            e.to_string(),
-        ))),
+        Err(e) => Err(Box::new(std::io::Error::other(e.to_string()))),
     }
 }
 
@@ -390,12 +410,8 @@ fn print_phase_start(name: &str) {
         .unwrap_or(("●", "Executing..."));
 
     let now = Local::now().format("%H:%M:%S").to_string();
-    println!(
-        " {CYAN}┌─{BOLD}{icon} {name}{RESET}{DIM}  {desc}{RESET}"
-    );
-    println!(
-        " {CYAN}│{RESET}  {DIM}at {now}{RESET}"
-    );
+    println!(" {CYAN}┌─{BOLD}{icon} {name}{RESET}{DIM}  {desc}{RESET}");
+    println!(" {CYAN}│{RESET}  {DIM}at {now}{RESET}");
 }
 
 fn print_phase_complete(name: &str, elapsed: &str) {
@@ -406,9 +422,7 @@ fn print_phase_complete(name: &str, elapsed: &str) {
         .unwrap_or("●");
 
     let now = Local::now().format("%H:%M:%S").to_string();
-    println!(
-        " {GREEN}└─{BOLD}{icon} {name}{RESET}  {DIM}✓ done  ({elapsed})  at {now}{RESET}"
-    );
+    println!(" {GREEN}└─{BOLD}{icon} {name}{RESET}  {DIM}✓ done  ({elapsed})  at {now}{RESET}");
 }
 
 fn print_log_event(event: &str) {
@@ -421,17 +435,18 @@ fn print_log_event(event: &str) {
 fn extract_time(event: &str) -> String {
     // Format: "[2026-05-30T12:34:56+00:00] message"
     if event.starts_with('[')
-        && let Some(end) = event.find(']') {
-            let full = &event[1..end];
-            // full is like "2026-05-30T12:34:56+00:00" or "2026-05-30T12:34:56Z"
-            if let Some(t_pos) = full.find('T') {
-                // Take exactly 8 characters after 'T' for HH:MM:SS
-                let time_part: String = full[t_pos + 1..].chars().take(8).collect();
-                if time_part.len() == 8 {
-                    return time_part;
-                }
+        && let Some(end) = event.find(']')
+    {
+        let full = &event[1..end];
+        // full is like "2026-05-30T12:34:56+00:00" or "2026-05-30T12:34:56Z"
+        if let Some(t_pos) = full.find('T') {
+            // Take exactly 8 characters after 'T' for HH:MM:SS
+            let time_part: String = full[t_pos + 1..].chars().take(8).collect();
+            if time_part.len() == 8 {
+                return time_part;
             }
         }
+    }
     "--:--:--".to_string()
 }
 
@@ -453,7 +468,12 @@ fn colorize_message(msg: &str) -> String {
         format!("{YELLOW}{msg}{RESET}")
     } else if msg.starts_with("Observe:") || msg.starts_with("Think:") {
         format!("{DIM}{msg}{RESET}")
-    } else if msg.starts_with("Plan:") || msg.starts_with("Build:") || msg.starts_with("Execute:") || msg.starts_with("Verify:") || msg.starts_with("Learn:") {
+    } else if msg.starts_with("Plan:")
+        || msg.starts_with("Build:")
+        || msg.starts_with("Execute:")
+        || msg.starts_with("Verify:")
+        || msg.starts_with("Learn:")
+    {
         format!("{MAGENTA}{msg}{RESET}")
     } else {
         format!("{DIM}{msg}{RESET}")

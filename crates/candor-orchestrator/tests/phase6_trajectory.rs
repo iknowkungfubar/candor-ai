@@ -2,9 +2,7 @@
 use std::path::PathBuf;
 
 use candor_orchestrator::skills::{Skill, extract_skills_from_log, persist_skills};
-use candor_orchestrator::trajectory::{
-    TrajectoryEntry, append_to_jsonl, LoRAPipeline,
-};
+use candor_orchestrator::trajectory::{LoRAPipeline, TrajectoryEntry, append_to_jsonl};
 
 // ── Criterion 1: Learn node generates .md skill file ──
 
@@ -14,7 +12,11 @@ fn test_skill_to_markdown_format() {
         name: "test-skill".into(),
         description: "Test skill for Phase 6".into(),
         trigger: "when testing".into(),
-        steps: vec!["Step 1: Observe".into(), "Step 2: Build".into(), "Step 3: Verify".into()],
+        steps: vec![
+            "Step 1: Observe".into(),
+            "Step 2: Build".into(),
+            "Step 3: Verify".into(),
+        ],
         tools_used: vec!["read_file".into(), "shell".into(), "run_tests".into()],
         pitfalls: vec!["Don't forget to lock the mutex".into()],
         use_count: 1,
@@ -129,7 +131,9 @@ async fn test_jsonl_appends_multiple_entries() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("daily.jsonl");
 
-    for phase in &["observe", "think", "plan", "build", "execute", "verify", "learn"] {
+    for phase in &[
+        "observe", "think", "plan", "build", "execute", "verify", "learn",
+    ] {
         let entry = TrajectoryEntry::new("sess-1", phase, &format!("did {phase}"), "ok");
         append_to_jsonl(&entry, &path).await.unwrap();
     }
@@ -169,16 +173,15 @@ async fn test_lora_pipeline_provision_writes_config() {
     let jsonl = dir.path().join("trajectories.jsonl");
     tokio::fs::write(&jsonl, "{}").await.unwrap();
 
-    let pipeline = LoRAPipeline::new(
-        jsonl,
-        dir.path().join("lora_weights"),
-        "phi-3-mini".into(),
-    );
+    let pipeline = LoRAPipeline::new(jsonl, dir.path().join("lora_weights"), "phi-3-mini".into());
 
     assert!(pipeline.validate().unwrap());
     pipeline.provision().await.unwrap();
 
-    let config_path = dir.path().join("lora_weights").join("lora_pipeline_config.json");
+    let config_path = dir
+        .path()
+        .join("lora_weights")
+        .join("lora_pipeline_config.json");
     assert!(config_path.exists());
 
     let config = tokio::fs::read_to_string(&config_path).await.unwrap();

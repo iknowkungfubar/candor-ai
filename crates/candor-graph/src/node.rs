@@ -3,8 +3,8 @@
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
-use candor_core::state::AgentState;
 use candor_core::error::CoreError;
+use candor_core::state::AgentState;
 
 #[async_trait::async_trait]
 pub trait AgentNode: Send + Sync {
@@ -17,8 +17,5 @@ pub trait AgentNode: Send + Sync {
     /// necessary lines. Holding a lock across an await point (network I/O,
     /// subprocess spawn) causes Tokio executor deadlocks. See design doc
     /// Troubleshooting Protocol: Graph Deadlocks.
-    async fn execute(
-        &self,
-        state: Arc<Mutex<AgentState>>,
-    ) -> Result<(), CoreError>;
+    async fn execute(&self, state: Arc<Mutex<AgentState>>) -> Result<(), CoreError>;
 }

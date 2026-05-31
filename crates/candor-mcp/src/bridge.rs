@@ -32,11 +32,7 @@ impl McpToolBridge {
             let transport = transport::parse_transport(part)
                 .ok_or_else(|| CoreError::Internal(format!("Invalid MCP transport: {part}")))?;
 
-            let mut client = McpClient::connect(
-                format!("mcp-{}", part),
-                transport,
-            )
-            .await?;
+            let mut client = McpClient::connect(format!("mcp-{}", part), transport).await?;
 
             client.discover_tools().await?;
             info!(
@@ -65,7 +61,11 @@ impl McpWrappedTool {
         description: String,
         client: Arc<tokio::sync::Mutex<McpClient>>,
     ) -> Self {
-        Self { tool_name, description, client }
+        Self {
+            tool_name,
+            description,
+            client,
+        }
     }
 }
 
@@ -79,18 +79,13 @@ impl Tool for McpWrappedTool {
         &self.description
     }
 
-    async fn execute(
-        &self,
-        _ctx: &ToolContext,
-        args: &[String],
-    ) -> Result<ToolOutput, CoreError> {
+    async fn execute(&self, _ctx: &ToolContext, args: &[String]) -> Result<ToolOutput, CoreError> {
         let client = self.client.lock().await;
         let arguments = if args.is_empty() {
             serde_json::json!({})
         } else if args.len() == 1 {
             // Try parsing as JSON
-            serde_json::from_str(&args[0])
-                .unwrap_or_else(|_| serde_json::json!({"input": args[0]}))
+            serde_json::from_str(&args[0]).unwrap_or_else(|_| serde_json::json!({"input": args[0]}))
         } else {
             serde_json::json!({"args": args})
         };

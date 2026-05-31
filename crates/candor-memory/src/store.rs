@@ -1,6 +1,6 @@
+use serde::{Deserialize, Serialize};
 /// Unified memory storage engine with SurrealDB.
 use std::time::Duration;
-use serde::{Deserialize, Serialize};
 use tokio::sync::OnceCell;
 use tracing::{error, info, instrument};
 
@@ -39,10 +39,7 @@ impl MemorySystem {
             .map_err(|e| CoreError::Internal(format!("SurrealDB ns/db error: {e}")))?;
 
         info!("SurrealDB memory engine ready (lazy schema)");
-        Ok(Self {
-            db,
-            embedding_dim,
-        })
+        Ok(Self { db, embedding_dim })
     }
 
     /// Lazily initialize schema on first actual operation.
@@ -51,7 +48,10 @@ impl MemorySystem {
             .get_or_try_init(|| async {
                 info!("Running lazy SurrealDB schema init");
                 let schema_queries = super::schema::schema_queries(self.embedding_dim);
-                let mut qr = self.db.query(&schema_queries).await
+                let mut qr = self
+                    .db
+                    .query(&schema_queries)
+                    .await
                     .map_err(|e| CoreError::Internal(format!("Schema query failed: {e}")))?;
 
                 if !qr.take_errors().is_empty() {
@@ -86,7 +86,8 @@ impl MemorySystem {
         };
 
         tokio::time::timeout(Duration::from_secs(5), async {
-            let _created: Option<MemoryBlock> = self.db
+            let _created: Option<MemoryBlock> = self
+                .db
                 .create("memory_block")
                 .content(entry)
                 .await
@@ -118,7 +119,9 @@ impl MemorySystem {
         ";
 
         let contents: Vec<String> = tokio::time::timeout(Duration::from_secs(5), async {
-            let mut result = self.db.query(sql)
+            let mut result = self
+                .db
+                .query(sql)
                 .bind(("query_vector", query_embedding))
                 .bind(("pid", project_id.to_string()))
                 .bind(("limit", top_k))
@@ -167,7 +170,8 @@ impl MemorySystem {
         };
 
         let _created: Option<LogEntry> = tokio::time::timeout(Duration::from_secs(5), async {
-            let created: Option<LogEntry> = self.db
+            let created: Option<LogEntry> = self
+                .db
                 .create("execution_log")
                 .content(entry)
                 .await
@@ -221,13 +225,16 @@ impl MemorySystem {
         .await
         .map_err(|_| CoreError::Internal("Get all execution logs timed out after 5s".into()))??;
 
-        Ok(rows.into_iter().map(|r| ExecutionLogEntry {
-            session_id: r.session_id,
-            phase: r.phase,
-            action: r.action,
-            result: r.result,
-            timestamp: r.timestamp,
-        }).collect())
+        Ok(rows
+            .into_iter()
+            .map(|r| ExecutionLogEntry {
+                session_id: r.session_id,
+                phase: r.phase,
+                action: r.action,
+                result: r.result,
+                timestamp: r.timestamp,
+            })
+            .collect())
     }
 
     /// Delete all execution_log entries after summarization.
@@ -241,7 +248,9 @@ impl MemorySystem {
                 .map_err(|e| CoreError::Internal(format!("Delete execution logs failed: {e}")))
         })
         .await
-        .map_err(|_| CoreError::Internal("Delete all execution logs timed out after 5s".into()))??;
+        .map_err(|_| {
+            CoreError::Internal("Delete all execution logs timed out after 5s".into())
+        })??;
 
         Ok(())
     }
@@ -276,13 +285,16 @@ impl MemorySystem {
         .await
         .map_err(|_| CoreError::Internal("Get execution logs by session timed out after 5s".into()))??;
 
-        Ok(rows.into_iter().map(|r| ExecutionLogEntry {
-            session_id: r.session_id,
-            phase: r.phase,
-            action: r.action,
-            result: r.result,
-            timestamp: r.timestamp,
-        }).collect())
+        Ok(rows
+            .into_iter()
+            .map(|r| ExecutionLogEntry {
+                session_id: r.session_id,
+                phase: r.phase,
+                action: r.action,
+                result: r.result,
+                timestamp: r.timestamp,
+            })
+            .collect())
     }
 
     pub fn embedding_dim(&self) -> usize {

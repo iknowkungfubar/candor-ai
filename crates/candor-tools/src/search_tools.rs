@@ -10,19 +10,17 @@ pub struct SearchCodeTool;
 
 #[async_trait::async_trait]
 impl Tool for SearchCodeTool {
-    fn name(&self) -> &str { "search_code" }
+    fn name(&self) -> &str {
+        "search_code"
+    }
     fn description(&self) -> &str {
         "Search for a pattern in source files using ripgrep. Args: <pattern> [file_glob]"
     }
 
-    async fn execute(
-        &self,
-        ctx: &ToolContext,
-        args: &[String],
-    ) -> Result<ToolOutput, CoreError> {
-        let pattern = args.first().ok_or_else(|| {
-            CoreError::Internal("search_code requires a pattern argument".into())
-        })?;
+    async fn execute(&self, ctx: &ToolContext, args: &[String]) -> Result<ToolOutput, CoreError> {
+        let pattern = args
+            .first()
+            .ok_or_else(|| CoreError::Internal("search_code requires a pattern argument".into()))?;
         let file_glob = args.get(1).map(|s| s.as_str()).unwrap_or("*.rs");
 
         info!(pattern = %pattern, "Searching code");
@@ -62,20 +60,16 @@ pub struct SearchFilesTool;
 
 #[async_trait::async_trait]
 impl Tool for SearchFilesTool {
-    fn name(&self) -> &str { "search_files" }
+    fn name(&self) -> &str {
+        "search_files"
+    }
     fn description(&self) -> &str {
         "Find files by name pattern. Args: <glob_pattern>"
     }
 
-    async fn execute(
-        &self,
-        ctx: &ToolContext,
-        args: &[String],
-    ) -> Result<ToolOutput, CoreError> {
+    async fn execute(&self, ctx: &ToolContext, args: &[String]) -> Result<ToolOutput, CoreError> {
         let pattern = args.first().ok_or_else(|| {
-            CoreError::Internal(
-                "search_files requires a glob pattern argument".into(),
-            )
+            CoreError::Internal("search_files requires a glob pattern argument".into())
         })?;
 
         info!(pattern = %pattern, "Finding files");
@@ -96,9 +90,7 @@ impl Tool for SearchFilesTool {
             .stderr(Stdio::piped())
             .output()
             .await
-            .map(|out| {
-                String::from_utf8_lossy(&out.stdout).to_string()
-            })
+            .map(|out| String::from_utf8_lossy(&out.stdout).to_string())
             .unwrap_or_default();
 
         if output.trim().is_empty() {

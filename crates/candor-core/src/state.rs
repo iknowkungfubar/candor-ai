@@ -104,7 +104,6 @@ impl AgentState {
     /// Log an execution event into the state.
     pub fn log_event(&mut self, event: &str) {
         let timestamp = chrono::Utc::now().to_rfc3339();
-        self.execution_log
-            .push(format!("[{timestamp}] {event}"));
+        self.execution_log.push(format!("[{timestamp}] {event}"));
     }
 }

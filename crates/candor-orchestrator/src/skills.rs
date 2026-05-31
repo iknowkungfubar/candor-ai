@@ -37,13 +37,18 @@ impl Skill {
         md.push_str("hermes:\n");
         md.push_str(&format!("  use_count: {}\n", self.use_count));
 
-        let tools_str = self.tools_used.iter()
+        let tools_str = self
+            .tools_used
+            .iter()
             .map(|t| format!("\"{}\"", t))
             .collect::<Vec<_>>()
             .join(", ");
         md.push_str(&format!("  tools: [{}]\n", tools_str));
         md.push_str("---\n\n");
-        md.push_str(&format!("# {}\n\n", self.name.replace('-', " ").to_uppercase()));
+        md.push_str(&format!(
+            "# {}\n\n",
+            self.name.replace('-', " ").to_uppercase()
+        ));
         md.push_str(&format!("{}\n\n", self.description));
         md.push_str("## Steps\n\n");
 
@@ -63,11 +68,7 @@ impl Skill {
 }
 
 /// Extract skills from a session's execution log.
-pub fn extract_skills_from_log(
-    task: &str,
-    log: &[String],
-    tools_used: &[String],
-) -> Vec<Skill> {
+pub fn extract_skills_from_log(task: &str, log: &[String], tools_used: &[String]) -> Vec<Skill> {
     let mut skills = Vec::new();
 
     // Look for patterns indicating a completed task
@@ -76,7 +77,8 @@ pub fn extract_skills_from_log(
 
     if test_passed && completed {
         // Extract the plan steps as skill steps
-        let plan_content = log.iter()
+        let plan_content = log
+            .iter()
             .find(|e| e.contains("Plan:") || e.contains("Plan:\n"))
             .map(|e| e.to_string())
             .unwrap_or_default();
@@ -99,9 +101,11 @@ pub fn extract_skills_from_log(
             .collect::<Vec<_>>()
             .join("-");
 
-        let pitfalls = log.iter()
+        let pitfalls = log
+            .iter()
             .filter(|e| e.contains("failed") || e.contains("error") || e.contains("FAILED"))
-            .take(5).cloned()
+            .take(5)
+            .cloned()
             .collect();
 
         let skill = Skill {
@@ -109,7 +113,10 @@ pub fn extract_skills_from_log(
             description: task.to_string(),
             trigger: task.to_string(),
             steps: if steps.is_empty() {
-                vec!["Execute the build phase".into(), "Run tests in Verify phase".into()]
+                vec![
+                    "Execute the build phase".into(),
+                    "Run tests in Verify phase".into(),
+                ]
             } else {
                 steps
             },
@@ -125,10 +132,7 @@ pub fn extract_skills_from_log(
 }
 
 /// Write skills to disk as SKILL.md files.
-pub async fn persist_skills(
-    skills: &[Skill],
-    skills_dir: &PathBuf,
-) -> Result<usize, CoreError> {
+pub async fn persist_skills(skills: &[Skill], skills_dir: &PathBuf) -> Result<usize, CoreError> {
     tokio::fs::create_dir_all(skills_dir)
         .await
         .map_err(|e| CoreError::Io(e.to_string()))?;
@@ -142,14 +146,19 @@ pub async fn persist_skills(
         if path.exists() {
             info!(skill = %skill.name, "Updating existing skill");
             if let Ok(existing) = tokio::fs::read_to_string(&path).await
-                && existing.contains(&skill.description) {
-                    // Same skill, bump counter
-                    let updated = existing.replace("use_count: 1", &format!("use_count: {}", skill.use_count + 1));
-                    tokio::fs::write(&path, updated).await
-                        .map_err(|e| CoreError::Io(e.to_string()))?;
-                    written += 1;
-                    continue;
-                }
+                && existing.contains(&skill.description)
+            {
+                // Same skill, bump counter
+                let updated = existing.replace(
+                    "use_count: 1",
+                    &format!("use_count: {}", skill.use_count + 1),
+                );
+                tokio::fs::write(&path, updated)
+                    .await
+                    .map_err(|e| CoreError::Io(e.to_string()))?;
+                written += 1;
+                continue;
+            }
         }
 
         tokio::fs::write(&path, content)
@@ -201,10 +210,7 @@ mod tests {
 
     #[test]
     fn test_no_skill_from_failed_log() {
-        let log = vec![
-            "Task: broken feature".into(),
-            "Verify: FAILED".into(),
-        ];
+        let log = vec!["Task: broken feature".into(), "Verify: FAILED".into()];
 
         let skills = extract_skills_from_log("broken feature", &log, &[]);
         assert_eq!(skills.len(), 0);

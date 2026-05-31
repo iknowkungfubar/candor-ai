@@ -53,8 +53,7 @@ impl CognitiveEngine {
 
         info!(
             frontier_healthy,
-            local_healthy,
-            "CognitiveEngine initialized"
+            local_healthy, "CognitiveEngine initialized"
         );
 
         Ok(Self {
@@ -68,21 +67,20 @@ impl CognitiveEngine {
 
     /// Generate text, routing to the appropriate backend.
     #[instrument(skip(self))]
-    pub async fn generate(
-        &self,
-        request: &LlmRequest,
-    ) -> Result<String, CoreError> {
+    pub async fn generate(&self, request: &LlmRequest) -> Result<String, CoreError> {
         if self.frontier_healthy
-            && let Some(ref backend) = self.frontier_pipeline {
-                info!("Routing to frontier pipeline");
-                return Ok(backend.generate(request).await?.text);
-            }
+            && let Some(ref backend) = self.frontier_pipeline
+        {
+            info!("Routing to frontier pipeline");
+            return Ok(backend.generate(request).await?.text);
+        }
 
         if self.local_healthy
-            && let Some(ref backend) = self.local_pipeline {
-                info!("Falling back to local pipeline");
-                return Ok(backend.generate(request).await?.text);
-            }
+            && let Some(ref backend) = self.local_pipeline
+        {
+            info!("Falling back to local pipeline");
+            return Ok(backend.generate(request).await?.text);
+        }
 
         Err(CoreError::Internal(
             "No healthy inference backend available".into(),
@@ -92,10 +90,7 @@ impl CognitiveEngine {
     /// Generate using the fast local pipeline (for sentinel audits).
     /// Falls back to frontier if no local pipeline is available.
     #[instrument(skip(self))]
-    pub async fn generate_fast(
-        &self,
-        prompt: &str,
-    ) -> Result<String, CoreError> {
+    pub async fn generate_fast(&self, prompt: &str) -> Result<String, CoreError> {
         // Try local first, then frontier.
         let backend = if self.local_healthy {
             self.local_pipeline.as_ref()
@@ -127,10 +122,7 @@ impl CognitiveEngine {
     }
 
     /// Generate embeddings for a batch of texts.
-    pub fn embed_batch(
-        &self,
-        texts: &[String],
-    ) -> Result<Vec<Vec<f32>>, CoreError> {
+    pub fn embed_batch(&self, texts: &[String]) -> Result<Vec<Vec<f32>>, CoreError> {
         self.embedder.embed_batch(texts)
     }
 

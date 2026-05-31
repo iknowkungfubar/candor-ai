@@ -10,16 +10,14 @@ pub struct RunTestsTool;
 
 #[async_trait::async_trait]
 impl Tool for RunTestsTool {
-    fn name(&self) -> &str { "run_tests" }
+    fn name(&self) -> &str {
+        "run_tests"
+    }
     fn description(&self) -> &str {
         "Run the project's test suite. Args: [test_filter] [--no-fail-fast]"
     }
 
-    async fn execute(
-        &self,
-        ctx: &ToolContext,
-        args: &[String],
-    ) -> Result<ToolOutput, CoreError> {
+    async fn execute(&self, ctx: &ToolContext, args: &[String]) -> Result<ToolOutput, CoreError> {
         // Safety gate: prevent recursive test invocation. When running
         // inside the agent's own test suite (CANDOR_SKIP_TEST_EXECUTION=1),
         // skip actual test execution to avoid infinite recursion.
@@ -41,28 +39,24 @@ impl Tool for RunTestsTool {
             cmd.arg("--no-fail-fast");
         }
         if let Some(filter) = &test_filter
-            && !filter.starts_with("--") {
-                cmd.arg(filter);
-            }
+            && !filter.starts_with("--")
+        {
+            cmd.arg(filter);
+        }
 
         let output = cmd
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .output()
             .await
-            .map_err(|e| {
-                CoreError::Internal(format!("Failed to run tests: {e}"))
-            })?;
+            .map_err(|e| CoreError::Internal(format!("Failed to run tests: {e}")))?;
 
         let stdout = String::from_utf8_lossy(&output.stdout);
         let stderr = String::from_utf8_lossy(&output.stderr);
 
         let summary = if output.status.success() {
             // Extract test summary
-            format!(
-                "Tests passed.\n{}",
-                extract_summary(&stdout)
-            )
+            format!("Tests passed.\n{}", extract_summary(&stdout))
         } else {
             format!(
                 "Tests FAILED.\nStdout:\n{}\nStderr:\n{}",

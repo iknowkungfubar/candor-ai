@@ -1,9 +1,9 @@
+use std::path::PathBuf;
 /// The complete Candor Agent — fully LLM-driven 7-phase SWE agent.
 ///
 /// Binds all subsystems: tools, LLM, sandbox, sentinel, memory, git.
 /// Each phase does real work using the cognitive engine and tool registry.
 use std::sync::Arc;
-use std::path::PathBuf;
 use tokio::sync::Mutex;
 use tracing::{error, info};
 use uuid::Uuid;
@@ -15,15 +15,14 @@ use candor_core::ideal::VerificationMethod;
 use candor_core::state::AgentState;
 use candor_graph::hooks::LifecycleHooks;
 use candor_graph::node::AgentNode as GraphNode;
-use candor_graph::recovery::{analyze_error, RecoveryNode};
+use candor_graph::recovery::{RecoveryNode, analyze_error};
 use candor_graph::runner::GraphRunner;
 use candor_memory::store::MemorySystem;
 use candor_sandbox::unified::ToolSandbox;
 use candor_tools::registry::{ToolContext, ToolRegistry};
 use candor_tools::{
-    ListDirTool, ReadFileTool, RunTestsTool, SearchCodeTool,
-    SearchFilesTool, ShellTool, WriteFileTool,
-    GitBranchTool, GitCommitTool, GitPushTool, GitStatusTool,
+    GitBranchTool, GitCommitTool, GitPushTool, GitStatusTool, ListDirTool, ReadFileTool,
+    RunTestsTool, SearchCodeTool, SearchFilesTool, ShellTool, WriteFileTool,
 };
 
 use super::markdown_router::MarkdownContext;
@@ -62,13 +61,11 @@ impl OrchestratorEngine {
     ) -> Result<Self, CoreError> {
         info!("Initializing Candor Agent");
 
-        let sandbox = ToolSandbox::new().map_err(|e| {
-            CoreError::Internal(format!("Sandbox: {e}"))
-        })?;
+        let sandbox =
+            ToolSandbox::new().map_err(|e| CoreError::Internal(format!("Sandbox: {e}")))?;
 
-        let sentinel = candor_sentinel::interceptor::SentinelInterceptor::new(
-            Arc::clone(&cognitive), vec![],
-        );
+        let sentinel =
+            candor_sentinel::interceptor::SentinelInterceptor::new(Arc::clone(&cognitive), vec![]);
 
         let mut tools = ToolRegistry::new();
         tools.register(Arc::new(ReadFileTool));
@@ -84,22 +81,28 @@ impl OrchestratorEngine {
         tools.register(Arc::new(GitStatusTool));
         let tools_arc = Arc::new(tools);
 
-        let hooks = LifecycleHooks::default()
-            .with_before_tool(sentinel.clone_box());
+        let hooks = LifecycleHooks::default().with_before_tool(sentinel.clone_box());
         let graph_runner = GraphRunner::new(max_iterations).with_hooks(hooks);
         let session_id = Uuid::new_v4().to_string();
 
         info!(session_id = %session_id, tools = tools_arc.tool_count(), "Agent ready");
 
         Ok(Self {
-            graph_runner, sandbox, cognitive, memory,
-            sentinel, session_id, tools: tools_arc,
+            graph_runner,
+            sandbox,
+            cognitive,
+            memory,
+            sentinel,
+            session_id,
+            tools: tools_arc,
             markdown_ctx: None,
         })
     }
 
     pub async fn run_task(
-        &mut self, task: &str, isa: &IdealStateArtifact,
+        &mut self,
+        task: &str,
+        isa: &IdealStateArtifact,
         markdown_ctx: Option<MarkdownContext>,
     ) -> Result<(), CoreError> {
         info!(task = %task, has_markdown_ctx = markdown_ctx.is_some(), "Starting agent task");
@@ -113,21 +116,13 @@ impl OrchestratorEngine {
             s.log_event(&format!("Task: {task}"));
 
             // Inject PDA identity into the agent's context if available.
-            if let Ok(identity) = std::fs::read_to_string(
-                dirs_or_default().join("IDENTITY.md")
-            ) {
-                s.append_message(&format!(
-                    "## User Identity\n\n{}",
-                    identity
-                ));
+            if let Ok(identity) = std::fs::read_to_string(dirs_or_default().join("IDENTITY.md")) {
+                s.append_message(&format!("## User Identity\n\n{}", identity));
             }
-            if let Ok(da_identity) = std::fs::read_to_string(
-                dirs_or_default().join("DA_IDENTITY.md")
-            ) {
-                s.append_message(&format!(
-                    "## Assistant Identity\n\n{}",
-                    da_identity
-                ));
+            if let Ok(da_identity) =
+                std::fs::read_to_string(dirs_or_default().join("DA_IDENTITY.md"))
+            {
+                s.append_message(&format!("## Assistant Identity\n\n{}", da_identity));
             }
 
             // Inject prior learnings from PDA file-based memory into context.
@@ -138,9 +133,10 @@ impl OrchestratorEngine {
                     for entry in read_dir.flatten() {
                         let path = entry.path();
                         if path.extension().and_then(|e| e.to_str()) == Some("md")
-                            && let Ok(content) = std::fs::read_to_string(&path) {
-                                entries.push(content);
-                            }
+                            && let Ok(content) = std::fs::read_to_string(&path)
+                        {
+                            entries.push(content);
+                        }
                     }
                 }
                 if !entries.is_empty() {
@@ -176,8 +172,7 @@ impl OrchestratorEngine {
                     if strategy.retry {
                         // Attempt recovery via RecoveryNode
                         let state = self.graph_runner.state();
-                        match recovery.execute(state).await
-                        {
+                        match recovery.execute(state).await {
                             Ok(()) => {
                                 info!("Recovery applied — retrying phase");
                                 // Reset the graph runner's iteration counter
@@ -186,8 +181,7 @@ impl OrchestratorEngine {
                                     let state = self.graph_runner.state();
                                     let mut s = state.lock().await;
                                     if s.iteration_count > 0 {
-                                        s.iteration_count =
-                                            s.iteration_count.saturating_sub(1);
+                                        s.iteration_count = s.iteration_count.saturating_sub(1);
                                     }
                                 }
                                 continue;
@@ -217,9 +211,9 @@ impl OrchestratorEngine {
         match result {
             Ok(()) => {
                 info!("Task complete");
-                self.memory.store_execution_log(
-                    &self.session_id, "complete", "task", task,
-                ).await?;
+                self.memory
+                    .store_execution_log(&self.session_id, "complete", "task", task)
+                    .await?;
 
                 // Store a learning entry in PDA file-based memory.
                 {
@@ -252,9 +246,9 @@ impl OrchestratorEngine {
             }
             Err(e) => {
                 error!(error = %e, "Task failed");
-                self.memory.store_execution_log(
-                    &self.session_id, "failed", "task", &format!("{e}"),
-                ).await?;
+                self.memory
+                    .store_execution_log(&self.session_id, "failed", "task", &format!("{e}"))
+                    .await?;
                 Err(e)
             }
         }
@@ -267,7 +261,8 @@ impl OrchestratorEngine {
         let mut idxs = Vec::new();
         for phase in Phase::ordered() {
             let ctx = PhaseContext {
-                phase, cognitive: Arc::clone(&self.cognitive),
+                phase,
+                cognitive: Arc::clone(&self.cognitive),
                 memory: Arc::clone(&self.memory),
                 tools: Arc::clone(&self.tools),
                 workdir: wd.clone(),
@@ -301,8 +296,7 @@ impl OrchestratorEngine {
         let resolved = match path {
             Some(p) => p.to_path_buf(),
             None => {
-                let cwd = std::env::current_dir()
-                    .map_err(|e| CoreError::Io(e.to_string()))?;
+                let cwd = std::env::current_dir().map_err(|e| CoreError::Io(e.to_string()))?;
                 cwd.join("SYSTEM.md")
             }
         };
@@ -334,15 +328,19 @@ impl OrchestratorEngine {
 
 #[async_trait::async_trait]
 impl GraphNode for PhaseContext {
-    fn name(&self) -> &str { self.phase.name() }
+    fn name(&self) -> &str {
+        self.phase.name()
+    }
 
     async fn execute(&self, state: Arc<Mutex<AgentState>>) -> Result<(), CoreError> {
         info!(phase = %self.phase, "Executing");
 
         let ph = self.phase.name().to_string();
-        { let mut s = state.lock().await;
-          s.current_phase = Some(ph.clone());
-          s.log_event(&format!("Phase: {}", self.phase)); }
+        {
+            let mut s = state.lock().await;
+            s.current_phase = Some(ph.clone());
+            s.log_event(&format!("Phase: {}", self.phase));
+        }
 
         let ctx = ToolContext {
             workdir: self.workdir.clone(),
@@ -375,42 +373,56 @@ impl PhaseContext {
         if let Some(ref ctx) = self.markdown_ctx {
             let preamble = ctx.format_system_prompt();
             if !preamble.is_empty() {
-                return format!(
-                    "{}\n\n---\n\n{}",
-                    preamble, base_prompt,
-                );
+                return format!("{}\n\n---\n\n{}", preamble, base_prompt,);
             }
         }
         base_prompt.to_string()
     }
 
-    async fn observe(&self, ctx: &ToolContext, state: Arc<Mutex<AgentState>>) -> Result<(), CoreError> {
+    async fn observe(
+        &self,
+        ctx: &ToolContext,
+        state: Arc<Mutex<AgentState>>,
+    ) -> Result<(), CoreError> {
         let mut s = state.lock().await;
         s.log_event("Observe: scanning project");
 
         // List project structure
         if let Some(tool) = self.tools.find("list_dir")
-            && let Ok(out) = tool.execute(ctx, &[]).await {
-                s.append_message(&format!("Project files:\n{}", out.output));
-            }
+            && let Ok(out) = tool.execute(ctx, &[]).await
+        {
+            s.append_message(&format!("Project files:\n{}", out.output));
+        }
         // Find key files
         if let Some(tool) = self.tools.find("search_files")
-            && let Ok(out) = tool.execute(ctx, &["*.rs".to_string()]).await {
-                s.append_message(&format!("\nRust sources:\n{}", out.output));
-            }
+            && let Ok(out) = tool.execute(ctx, &["*.rs".to_string()]).await
+        {
+            s.append_message(&format!("\nRust sources:\n{}", out.output));
+        }
         // Read Cargo.toml
         if let Some(tool) = self.tools.find("read_file")
-            && let Ok(out) = tool.execute(ctx, &["Cargo.toml".into()]).await {
-                s.append_message(&format!("\nCargo.toml:\n{}", out.output));
-            }
+            && let Ok(out) = tool.execute(ctx, &["Cargo.toml".into()]).await
+        {
+            s.append_message(&format!("\nCargo.toml:\n{}", out.output));
+        }
         s.log_event("Observe: complete");
         Ok(())
     }
 
-    async fn think(&self, _ctx: &ToolContext, state: Arc<Mutex<AgentState>>) -> Result<(), CoreError> {
+    async fn think(
+        &self,
+        _ctx: &ToolContext,
+        state: Arc<Mutex<AgentState>>,
+    ) -> Result<(), CoreError> {
         let context = {
             let s = state.lock().await;
-            s.message_history.iter().rev().take(15).cloned().collect::<Vec<_>>().join("\n")
+            s.message_history
+                .iter()
+                .rev()
+                .take(15)
+                .cloned()
+                .collect::<Vec<_>>()
+                .join("\n")
         };
 
         let base = format!(
@@ -432,10 +444,20 @@ impl PhaseContext {
         Ok(())
     }
 
-    async fn plan(&self, _ctx: &ToolContext, state: Arc<Mutex<AgentState>>) -> Result<(), CoreError> {
+    async fn plan(
+        &self,
+        _ctx: &ToolContext,
+        state: Arc<Mutex<AgentState>>,
+    ) -> Result<(), CoreError> {
         let context = {
             let s = state.lock().await;
-            s.message_history.iter().rev().take(20).cloned().collect::<Vec<_>>().join("\n")
+            s.message_history
+                .iter()
+                .rev()
+                .take(20)
+                .cloned()
+                .collect::<Vec<_>>()
+                .join("\n")
         };
 
         let tools_desc = self.tools.descriptions_for_llm();
@@ -459,10 +481,20 @@ impl PhaseContext {
         Ok(())
     }
 
-    async fn build(&self, _ctx: &ToolContext, state: Arc<Mutex<AgentState>>) -> Result<(), CoreError> {
+    async fn build(
+        &self,
+        _ctx: &ToolContext,
+        state: Arc<Mutex<AgentState>>,
+    ) -> Result<(), CoreError> {
         let context = {
             let s = state.lock().await;
-            s.message_history.iter().rev().take(25).cloned().collect::<Vec<_>>().join("\n")
+            s.message_history
+                .iter()
+                .rev()
+                .take(25)
+                .cloned()
+                .collect::<Vec<_>>()
+                .join("\n")
         };
 
         let base = format!(
@@ -485,7 +517,11 @@ impl PhaseContext {
         Ok(())
     }
 
-    async fn exec(&self, ctx: &ToolContext, state: Arc<Mutex<AgentState>>) -> Result<(), CoreError> {
+    async fn exec(
+        &self,
+        ctx: &ToolContext,
+        state: Arc<Mutex<AgentState>>,
+    ) -> Result<(), CoreError> {
         // ── ISA validation gate (Build→Execute transition) ──
         // The Ideal State Artifact must define acceptance criteria before
         // execution can proceed. This enforces the design contract that
@@ -532,14 +568,12 @@ impl PhaseContext {
 
         // Check 1: at least one acceptance criterion
         if isa.acceptance_criteria.is_empty() {
-            return Err(CoreError::IdealStateNotSatisfied(
-                format!(
-                    "ISA '{}' has no acceptance criteria defined. \
+            return Err(CoreError::IdealStateNotSatisfied(format!(
+                "ISA '{}' has no acceptance criteria defined. \
                      Goal: '{}'. Task: '{}'. At least one acceptance criterion \
                      is required before the Build→Execute transition.",
-                    isa.id, isa.goal, active_task,
-                ),
-            ));
+                isa.id, isa.goal, active_task,
+            )));
         }
 
         // Check 2: each criterion must have a valid verification method
@@ -561,28 +595,24 @@ impl PhaseContext {
         }
 
         if !invalid_criteria.is_empty() {
-            return Err(CoreError::IdealStateNotSatisfied(
-                format!(
-                    "ISA '{}' has criteria with invalid/empty verification methods: [{}]. \
+            return Err(CoreError::IdealStateNotSatisfied(format!(
+                "ISA '{}' has criteria with invalid/empty verification methods: [{}]. \
                      Each acceptance criterion must specify a verification method with \
                      a non-empty value.",
-                    isa.id,
-                    invalid_criteria.join(", "),
-                ),
-            ));
+                isa.id,
+                invalid_criteria.join(", "),
+            )));
         }
 
         // Check 3: active task should reference the ISA's goal
         let goal_lower = isa.goal.to_lowercase();
         let task_lower = active_task.to_lowercase();
         if !task_lower.contains(&goal_lower) && !goal_lower.contains(&task_lower) {
-            return Err(CoreError::IdealStateNotSatisfied(
-                format!(
-                    "Active task does not align with ISA goal. \
+            return Err(CoreError::IdealStateNotSatisfied(format!(
+                "Active task does not align with ISA goal. \
                      Task: '{}'. ISA Goal: '{}'.",
-                    active_task, isa.goal,
-                ),
-            ));
+                active_task, isa.goal,
+            )));
         }
 
         info!(
@@ -593,7 +623,11 @@ impl PhaseContext {
         Ok(())
     }
 
-    async fn verify(&self, ctx: &ToolContext, state: Arc<Mutex<AgentState>>) -> Result<(), CoreError> {
+    async fn verify(
+        &self,
+        ctx: &ToolContext,
+        state: Arc<Mutex<AgentState>>,
+    ) -> Result<(), CoreError> {
         let mut s = state.lock().await;
         s.log_event("Verify: running tests");
 
@@ -602,7 +636,11 @@ impl PhaseContext {
                 Ok(out) => {
                     let passed = out.success;
                     s.append_message(&format!("Tests:\n{}", out.output));
-                    let msg = if passed { "Verify: PASSED" } else { "Verify: FAILED" };
+                    let msg = if passed {
+                        "Verify: PASSED"
+                    } else {
+                        "Verify: FAILED"
+                    };
                     s.log_event(msg);
                 }
                 Err(e) => s.log_event(&format!("Verify: error ({e})")),
@@ -611,19 +649,32 @@ impl PhaseContext {
         Ok(())
     }
 
-    async fn learn(&self, _ctx: &ToolContext, state: Arc<Mutex<AgentState>>) -> Result<(), CoreError> {
+    async fn learn(
+        &self,
+        _ctx: &ToolContext,
+        state: Arc<Mutex<AgentState>>,
+    ) -> Result<(), CoreError> {
         let (task, pid, log) = {
             let s = state.lock().await;
-            (s.active_task.clone(), s.project_id.clone(), s.execution_log.clone())
+            (
+                s.active_task.clone(),
+                s.project_id.clone(),
+                s.execution_log.clone(),
+            )
         };
 
         // Generate session summary
         let mut summary = format!("# Session\n**Task:** {task}\n\n## Events\n");
-        for e in log.iter().rev().take(30) { summary.push_str(&format!("- {e}\n")); }
+        for e in log.iter().rev().take(30) {
+            summary.push_str(&format!("- {e}\n"));
+        }
 
         if let Some(ref pid) = pid {
             let emb = vec![0.0_f32; 384];
-            let _ = self.memory.store_memory(pid.clone(), summary.clone(), emb).await;
+            let _ = self
+                .memory
+                .store_memory(pid.clone(), summary.clone(), emb)
+                .await;
             info!(pid = %pid, "Learn: stored");
         }
 
@@ -644,13 +695,20 @@ async fn write_code_files(output: &str, workdir: &str) -> usize {
     for line in output.lines() {
         if line.starts_with("### FILE:") || line.starts_with("## FILE:") {
             flush_file(&path, &code, workdir).await;
-            path = Some(line.trim_start_matches("### FILE:").trim_start_matches("## FILE:").trim().to_string());
+            path = Some(
+                line.trim_start_matches("### FILE:")
+                    .trim_start_matches("## FILE:")
+                    .trim()
+                    .to_string(),
+            );
             code.clear();
             in_block = false;
         } else if line.trim() == "```" {
             in_block = !in_block;
         } else if in_block {
-            if !code.is_empty() { code.push('\n'); }
+            if !code.is_empty() {
+                code.push('\n');
+            }
             code.push_str(line);
         }
     }
@@ -660,11 +718,13 @@ async fn write_code_files(output: &str, workdir: &str) -> usize {
 
 async fn flush_file(path: &Option<String>, code: &str, workdir: &str) {
     if let Some(p) = path
-        && !code.is_empty() && !p.is_empty() {
-            let full = std::path::PathBuf::from(workdir).join(p);
-            let _ = tokio::fs::create_dir_all(full.parent().unwrap()).await;
-            let _ = tokio::fs::write(&full, code).await;
-        }
+        && !code.is_empty()
+        && !p.is_empty()
+    {
+        let full = std::path::PathBuf::from(workdir).join(p);
+        let _ = tokio::fs::create_dir_all(full.parent().unwrap()).await;
+        let _ = tokio::fs::write(&full, code).await;
+    }
 }
 
 /// Resolve the PDA home directory (~/.candor) or fall back to /tmp.
@@ -681,7 +741,13 @@ fn dirs_or_default() -> PathBuf {
 fn slugify(s: &str) -> String {
     s.to_lowercase()
         .chars()
-        .map(|c| if c.is_alphanumeric() || c == '-' || c == '_' { c } else { ' ' })
+        .map(|c| {
+            if c.is_alphanumeric() || c == '-' || c == '_' {
+                c
+            } else {
+                ' '
+            }
+        })
         .collect::<String>()
         .split_whitespace()
         .collect::<Vec<_>>()
@@ -695,8 +761,8 @@ fn slugify(s: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use candor_core::ideal::AcceptanceCriterion;
     use candor_cognitive::CognitiveEngine;
+    use candor_core::ideal::AcceptanceCriterion;
     #[tokio::test]
     async fn test_agent_init() {
         let c = Arc::new(CognitiveEngine::new(None, None).await.unwrap());
@@ -709,7 +775,9 @@ mod tests {
         // Safety guard: prevent RunTestsTool from recursively invoking
         // this test via `cargo test` during the Verify phase.
         // SAFETY: Single-threaded test, no concurrent access to this env var.
-        unsafe { std::env::set_var("CANDOR_SKIP_TEST_EXECUTION", "1"); }
+        unsafe {
+            std::env::set_var("CANDOR_SKIP_TEST_EXECUTION", "1");
+        }
 
         let c = Arc::new(CognitiveEngine::new(None, None).await.unwrap());
         let m = Arc::new(MemorySystem::new(384).await.unwrap());
@@ -719,17 +787,17 @@ mod tests {
         agent.graph_runner = GraphRunner::new(100).with_hooks(hooks);
 
         let isa = IdealStateArtifact {
-            id: "test".into(), goal: "list files".into(),
-            acceptance_criteria: vec![
-                AcceptanceCriterion {
-                    id: "list-output".into(),
-                    description: "list_dir produces output".into(),
-                    verification_method: VerificationMethod::ShellCommand {
-                        command: "ls".into(),
-                    },
+            id: "test".into(),
+            goal: "list files".into(),
+            acceptance_criteria: vec![AcceptanceCriterion {
+                id: "list-output".into(),
+                description: "list_dir produces output".into(),
+                verification_method: VerificationMethod::ShellCommand {
+                    command: "ls".into(),
                 },
-            ],
-            constraints: vec![], expected_artifacts: vec![],
+            }],
+            constraints: vec![],
+            expected_artifacts: vec![],
             phase_requirements: Default::default(),
             fully_autonomous: true,
         };

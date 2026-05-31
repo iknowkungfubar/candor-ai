@@ -22,10 +22,7 @@ impl AgentNode for StampNode {
         &self.name
     }
 
-    async fn execute(
-        &self,
-        state: Arc<Mutex<AgentState>>,
-    ) -> Result<(), CoreError> {
+    async fn execute(&self, state: Arc<Mutex<AgentState>>) -> Result<(), CoreError> {
         let mut s = state.lock().await;
         s.log_event(&format!("stamped: {}", self.name));
         Ok(())
@@ -40,7 +37,12 @@ struct CountingHook {
 impl CountingHook {
     fn new() -> (Self, Arc<std::sync::atomic::AtomicU32>) {
         let count = Arc::new(std::sync::atomic::AtomicU32::new(0));
-        (Self { call_count: Arc::clone(&count) }, count)
+        (
+            Self {
+                call_count: Arc::clone(&count),
+            },
+            count,
+        )
     }
 }
 
@@ -73,10 +75,7 @@ impl AfterToolCallback for CountingHook {
 
 #[async_trait::async_trait]
 impl CompletionCallback for CountingHook {
-    async fn on_complete(
-        &self,
-        _state: Arc<Mutex<AgentState>>,
-    ) -> Result<(), CoreError> {
+    async fn on_complete(&self, _state: Arc<Mutex<AgentState>>) -> Result<(), CoreError> {
         self.call_count
             .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
         Ok(())
@@ -120,8 +119,7 @@ async fn test_before_tool_hook_rejects_action() {
         }
     }
 
-    let hooks = LifecycleHooks::default()
-        .with_before_tool(Box::new(RejectingHook));
+    let hooks = LifecycleHooks::default().with_before_tool(Box::new(RejectingHook));
 
     let mut runner = GraphRunner::new(100).with_hooks(hooks);
     let n1 = runner.insert_node("test", Box::new(StampNode { name: "a".into() }));

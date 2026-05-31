@@ -1,10 +1,5 @@
 /// API route handlers for the Life Dashboard.
-use axum::{
-    Json,
-    extract::State,
-    http::StatusCode,
-    response::IntoResponse,
-};
+use axum::{Json, extract::State, http::StatusCode, response::IntoResponse};
 use serde::{Deserialize, Serialize};
 
 use super::AppState;
@@ -71,30 +66,47 @@ pub async fn root() -> impl IntoResponse {
 }
 
 /// GET /api/health
-pub async fn health(
-    State(state): State<AppState>,
-) -> impl IntoResponse {
+pub async fn health(State(state): State<AppState>) -> impl IntoResponse {
     let orch = state.orchestrator.lock().await;
     let state_arc = orch.graph_runner.state();
     let s = state_arc.lock().await;
 
     Json(HealthResponse {
-        status: if s.execution_log.iter().any(|e| e.contains("error")) { "degraded".into() } else { "ok".into() },
+        status: if s.execution_log.iter().any(|e| e.contains("error")) {
+            "degraded".into()
+        } else {
+            "ok".into()
+        },
         version: env!("CARGO_PKG_VERSION").into(),
         subsystems: SubsystemHealth {
-            graph: if orch.graph_runner.node_count() > 0 { "ok".into() } else { "empty".into() },
-            sandbox: if orch.sandbox.native_engine().is_bwrap_available() { "bubblewrap".into() } else { "direct".into() },
+            graph: if orch.graph_runner.node_count() > 0 {
+                "ok".into()
+            } else {
+                "empty".into()
+            },
+            sandbox: if orch.sandbox.native_engine().is_bwrap_available() {
+                "bubblewrap".into()
+            } else {
+                "direct".into()
+            },
             memory: format!("{}d", orch.memory.embedding_dim()),
-            sentinel: if orch.sentinel.is_active() { "active".into() } else { "inactive".into() },
-            cognitive: if orch.cognitive.is_frontier_healthy() || orch.cognitive.is_local_healthy() { "connected".into() } else { "mock".into() },
+            sentinel: if orch.sentinel.is_active() {
+                "active".into()
+            } else {
+                "inactive".into()
+            },
+            cognitive: if orch.cognitive.is_frontier_healthy() || orch.cognitive.is_local_healthy()
+            {
+                "connected".into()
+            } else {
+                "mock".into()
+            },
         },
     })
 }
 
 /// GET /api/status
-pub async fn status(
-    State(state): State<AppState>,
-) -> impl IntoResponse {
+pub async fn status(State(state): State<AppState>) -> impl IntoResponse {
     let orchestrator = state.orchestrator.lock().await;
 
     let current_phase = {
@@ -146,7 +158,10 @@ pub async fn submit_task(
         fully_autonomous: true,
     };
 
-    match orchestrator.run_task(&request.description, &isa, None).await {
+    match orchestrator
+        .run_task(&request.description, &isa, None)
+        .await
+    {
         Ok(()) => {
             state
                 .session_counter
@@ -169,9 +184,7 @@ pub async fn submit_task(
 }
 
 /// GET /api/metrics
-pub async fn metrics(
-    State(state): State<AppState>,
-) -> impl IntoResponse {
+pub async fn metrics(State(state): State<AppState>) -> impl IntoResponse {
     let count = state
         .session_counter
         .load(std::sync::atomic::Ordering::SeqCst);

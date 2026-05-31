@@ -57,10 +57,7 @@ impl WasmBackend {
     /// The module runs with fuel-limited instruction steps to
     /// deterministically prevent DoS attacks.
     #[instrument(skip(self))]
-    pub async fn execute(
-        &self,
-        request: &WasmExecRequest,
-    ) -> Result<WasmExecResult, CoreError> {
+    pub async fn execute(&self, request: &WasmExecRequest) -> Result<WasmExecResult, CoreError> {
         info!(
             wasm_path = %request.wasm_path.display(),
             function = %request.function,
@@ -69,29 +66,18 @@ impl WasmBackend {
 
         let wasm_bytes = tokio::fs::read(&request.wasm_path)
             .await
-            .map_err(|e| {
-                CoreError::Internal(format!(
-                    "Failed to read WASM module: {e}"
-                ))
-            })?;
+            .map_err(|e| CoreError::Internal(format!("Failed to read WASM module: {e}")))?;
 
         // Configure engine with fuel metering.
         let mut config = wasmtime::Config::new();
         config.consume_fuel(true);
 
-        let engine = wasmtime::Engine::new(&config).map_err(|e| {
-            CoreError::Internal(format!(
-                "Failed to create wasmtime engine: {e}"
-            ))
-        })?;
+        let engine = wasmtime::Engine::new(&config)
+            .map_err(|e| CoreError::Internal(format!("Failed to create wasmtime engine: {e}")))?;
 
         // Compile the module.
         let module = wasmtime::Module::from_binary(&engine, &wasm_bytes)
-            .map_err(|e| {
-                CoreError::Internal(format!(
-                    "Failed to compile WASM module: {e}"
-                ))
-            })?;
+            .map_err(|e| CoreError::Internal(format!("Failed to compile WASM module: {e}")))?;
 
         // Create a minimal linker (no host functions — deny-by-default).
         let linker = wasmtime::Linker::new(&engine);
@@ -99,22 +85,16 @@ impl WasmBackend {
 
         // Set fuel limit from policy.
         if let Some(fuel) = self.policy.fuel_limit {
-            store.set_fuel(fuel).map_err(|e| {
-                CoreError::Internal(format!(
-                    "Failed to set fuel limit: {e}"
-                ))
-            })?;
+            store
+                .set_fuel(fuel)
+                .map_err(|e| CoreError::Internal(format!("Failed to set fuel limit: {e}")))?;
         }
 
         // Instantiate the module.
         let instance = linker
             .instantiate_async(&mut store, &module)
             .await
-            .map_err(|e| {
-                CoreError::Internal(format!(
-                    "Failed to instantiate WASM module: {e}"
-                ))
-            })?;
+            .map_err(|e| CoreError::Internal(format!("Failed to instantiate WASM module: {e}")))?;
 
         // Get the requested function.
         let func = instance
@@ -130,14 +110,10 @@ impl WasmBackend {
         let mut result = [wasmtime::Val::I32(0)];
         let fuel_before = store.get_fuel().unwrap_or(0);
 
-        match func
-            .call_async(&mut store, &[], &mut result)
-            .await
-        {
+        match func.call_async(&mut store, &[], &mut result).await {
             Ok(()) => {
                 let fuel_after = store.get_fuel().unwrap_or(0);
-                let fuel_used =
-                    fuel_before.saturating_sub(fuel_after);
+                let fuel_used = fuel_before.saturating_sub(fuel_after);
 
                 let exit_code = match result[0] {
                     wasmtime::Val::I32(code) => code,
@@ -154,13 +130,10 @@ impl WasmBackend {
             Err(e) => {
                 if e.to_string().contains("fuel") {
                     Err(CoreError::Internal(
-                        "WASM execution: fuel exhausted (DoS protection)"
-                            .into(),
+                        "WASM execution: fuel exhausted (DoS protection)".into(),
                     ))
                 } else {
-                    Err(CoreError::Internal(format!(
-                        "WASM execution trap: {e}"
-                    )))
+                    Err(CoreError::Internal(format!("WASM execution trap: {e}")))
                 }
             }
         }
@@ -192,9 +165,7 @@ mod tests {
     async fn test_wasm_exec_nonexistent_file() {
         let backend = WasmBackend::default();
         let request = WasmExecRequest {
-            wasm_path: PathBuf::from(
-                "/nonexistent/test.wasm",
-            ),
+            wasm_path: PathBuf::from("/nonexistent/test.wasm"),
             function: "run".into(),
             stdin: None,
             timeout_secs: 5,

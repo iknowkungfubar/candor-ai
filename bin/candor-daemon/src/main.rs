@@ -19,20 +19,19 @@ use tower_http::cors::CorsLayer;
 use tracing::info;
 
 use candor_cognitive::{
-    AnthropicBackend, CognitiveEngine, DeepSeekBackend, GeminiBackend,
-    MockBackend, OpenAiBackend,
+    AnthropicBackend, CognitiveEngine, DeepSeekBackend, GeminiBackend, MockBackend, OpenAiBackend,
 };
 use candor_core::ideal::IdealStateArtifact;
 use candor_memory::store::MemorySystem;
 use candor_orchestrator::OrchestratorEngine;
 
+mod agents;
 mod chat;
+mod pda;
 mod routes;
 mod stt;
 mod tts;
 mod util;
-mod pda;
-mod agents;
 
 /// Candor AI — Lawful Good, Rust-native Agentic Operating System.
 #[derive(Parser, Debug)]
@@ -135,12 +134,20 @@ enum PdaAction {
     Status,
     /// Read or update IDENTITY.md
     Identity {
-        #[arg(short, long, help = "New identity content (if not provided, reads current)")]
+        #[arg(
+            short,
+            long,
+            help = "New identity content (if not provided, reads current)"
+        )]
         set: Option<String>,
     },
     /// Read or update DA_IDENTITY.md
     DaIdentity {
-        #[arg(short, long, help = "New DA identity content (if not provided, reads current)")]
+        #[arg(
+            short,
+            long,
+            help = "New DA identity content (if not provided, reads current)"
+        )]
         set: Option<String>,
     },
     /// List active work sessions
@@ -169,14 +176,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
 
     // Initialise tracing: with OTLP if --otlp-endpoint is set, otherwise fmt.
-    let _telemetry = candor_telemetry::init_telemetry(
-        "candor-daemon",
-        cli.otlp_endpoint.as_deref(),
-    );
+    let _telemetry =
+        candor_telemetry::init_telemetry("candor-daemon", cli.otlp_endpoint.as_deref());
 
     match cli.command {
-        Commands::Task { description, model, openai_base, openai_key, anthropic_key, max_iterations, embedding_dim } => {
-            println!("{CYAN}{BOLD}   Candor AI v{} — Task Mode{RESET}\n", env!("CARGO_PKG_VERSION"));
+        Commands::Task {
+            description,
+            model,
+            openai_base,
+            openai_key,
+            anthropic_key,
+            max_iterations,
+            embedding_dim,
+        } => {
+            println!(
+                "{CYAN}{BOLD}   Candor AI v{} — Task Mode{RESET}\n",
+                env!("CARGO_PKG_VERSION")
+            );
             // Auto-initialize PDA home if not set up.
             let _ = pda::init().await;
             let cognitive = build_cognitive(model, openai_key, anthropic_key, openai_base).await?;
@@ -186,8 +202,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             ));
             run_cli_task(description, orch).await?;
         }
-        Commands::Chat { model, openai_base, openai_key, anthropic_key } => {
-            println!("{CYAN}{BOLD}   Candor AI v{} — Chat Mode{RESET}\n", env!("CARGO_PKG_VERSION"));
+        Commands::Chat {
+            model,
+            openai_base,
+            openai_key,
+            anthropic_key,
+        } => {
+            println!(
+                "{CYAN}{BOLD}   Candor AI v{} — Chat Mode{RESET}\n",
+                env!("CARGO_PKG_VERSION")
+            );
             let _ = pda::init().await;
             let cognitive = build_cognitive(model, openai_key, anthropic_key, openai_base).await?;
             let memory = Arc::new(MemorySystem::new(384).await?);
@@ -197,11 +221,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             chat::run_chat(orch).await?;
         }
         Commands::Voice { prompt, duration } => {
-            println!("{CYAN}{BOLD}   Candor AI v{} — Voice Task (One-Shot){RESET}\n", env!("CARGO_PKG_VERSION"));
+            println!(
+                "{CYAN}{BOLD}   Candor AI v{} — Voice Task (One-Shot){RESET}\n",
+                env!("CARGO_PKG_VERSION")
+            );
             run_voice_task(prompt, duration).await?;
         }
-        Commands::VoiceInteractive { prompt, duration, max_turns } => {
-            println!("{CYAN}{BOLD}   Candor AI v{} — Voice Interactive{RESET}\n", env!("CARGO_PKG_VERSION"));
+        Commands::VoiceInteractive {
+            prompt,
+            duration,
+            max_turns,
+        } => {
+            println!(
+                "{CYAN}{BOLD}   Candor AI v{} — Voice Interactive{RESET}\n",
+                env!("CARGO_PKG_VERSION")
+            );
             run_voice_interactive(prompt, duration, max_turns).await?;
         }
         Commands::Init { path } => {
@@ -215,7 +249,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             ));
             run_health_check(orch).await;
         }
-        Commands::Serve { port, max_iterations, embedding_dim } => {
+        Commands::Serve {
+            port,
+            max_iterations,
+            embedding_dim,
+        } => {
             let cognitive = build_cognitive(None, None, None, None).await?;
             let memory = Arc::new(MemorySystem::new(embedding_dim).await?);
             let orch = Arc::new(tokio::sync::Mutex::new(
@@ -245,12 +283,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("{CYAN}{BOLD}   Candor PDA{RESET}\n");
             match action {
                 PdaAction::Init => {
-                    pda::init().await.map_err(|e| Box::new(std::io::Error::other(format!("{e}"))))?;
+                    pda::init()
+                        .await
+                        .map_err(|e| Box::new(std::io::Error::other(format!("{e}"))))?;
                     println!("  {GREEN}✅ PDA initialized at ~/.candor/{RESET}");
                     println!("  Edit IDENTITY.md and DA_IDENTITY.md to personalize.");
                 }
                 PdaAction::Status => {
-                    let status = pda::status().await.map_err(|e| Box::new(std::io::Error::other(format!("{e}"))))?;
+                    let status = pda::status()
+                        .await
+                        .map_err(|e| Box::new(std::io::Error::other(format!("{e}"))))?;
                     println!("{status}");
                 }
                 PdaAction::Identity { set } => {
@@ -259,7 +301,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         pda::auto_commit("update IDENTITY.md").await.ok();
                         println!("  {GREEN}✅ IDENTITY.md updated{RESET}");
                     } else {
-                        let content = pda::read_identity().await
+                        let content = pda::read_identity()
+                            .await
                             .map_err(|e| Box::new(std::io::Error::other(format!("{e}"))))?;
                         println!("{content}");
                     }
@@ -270,13 +313,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         pda::auto_commit("update DA_IDENTITY.md").await.ok();
                         println!("  {GREEN}✅ DA_IDENTITY.md updated{RESET}");
                     } else {
-                        let content = pda::read_da_identity().await
+                        let content = pda::read_da_identity()
+                            .await
                             .map_err(|e| Box::new(std::io::Error::other(format!("{e}"))))?;
                         println!("{content}");
                     }
                 }
                 PdaAction::Work => {
-                    let slugs = pda::list_work().await
+                    let slugs = pda::list_work()
+                        .await
                         .map_err(|e| Box::new(std::io::Error::other(format!("{e}"))))?;
                     if slugs.is_empty() {
                         println!("  {YELLOW}No active work sessions.{RESET}");
@@ -289,12 +334,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 }
                 PdaAction::WorkStart { slug, goal } => {
-                    pda::start_work(&slug, &goal).await
+                    pda::start_work(&slug, &goal)
+                        .await
                         .map_err(|e| Box::new(std::io::Error::other(format!("{e}"))))?;
                     println!("  {GREEN}✅ Work session '{slug}' started.{RESET}");
                 }
                 PdaAction::Digest => {
-                    let prompt = agents::morning_digest_prompt().await
+                    let prompt = agents::morning_digest_prompt()
+                        .await
                         .map_err(|e| Box::new(std::io::Error::other(e)))?;
                     println!("{BOLD}Generating morning digest…{RESET}");
                     let cognitive = build_cognitive(None, None, None, None).await?;
@@ -322,7 +369,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 }
                 PdaAction::Monitor => {
-                    let prompt = agents::monitor_prompt().await
+                    let prompt = agents::monitor_prompt()
+                        .await
                         .map_err(|e| Box::new(std::io::Error::other(e)))?;
                     println!("{BOLD}Running PDA monitor scan…{RESET}");
                     let cognitive = build_cognitive(None, None, None, None).await?;
@@ -361,8 +409,10 @@ const RESET: &str = "\x1b[0m";
 // ── Backend construction ──
 
 async fn build_cognitive(
-    model: Option<String>, openai_key: Option<String>,
-    anthropic_key: Option<String>, openai_base: Option<String>,
+    model: Option<String>,
+    openai_key: Option<String>,
+    anthropic_key: Option<String>,
+    openai_base: Option<String>,
 ) -> Result<Arc<CognitiveEngine>, Box<dyn std::error::Error>> {
     use std::env;
 
@@ -375,7 +425,9 @@ async fn build_cognitive(
     let mut label = String::new();
 
     if let Some(ref key) = anthropic_key {
-        let m = model_name.clone().unwrap_or_else(|| "claude-sonnet-4-20250514".into());
+        let m = model_name
+            .clone()
+            .unwrap_or_else(|| "claude-sonnet-4-20250514".into());
         backend = Some(Box::new(AnthropicBackend::new(key.clone(), &m)));
         label = format!("anthropic/{m}");
     } else if let Some(ref key) = env::var("DEEPSEEK_API_KEY").ok().as_ref() {
@@ -383,20 +435,38 @@ async fn build_cognitive(
         backend = Some(Box::new(DeepSeekBackend::new(key.to_string(), &m)));
         label = format!("deepseek/{m}");
     } else if let Some(ref key) = env::var("GEMINI_API_KEY").ok().as_ref() {
-        let m = model_name.clone().unwrap_or_else(|| "gemini-2.5-flash".into());
+        let m = model_name
+            .clone()
+            .unwrap_or_else(|| "gemini-2.5-flash".into());
         backend = Some(Box::new(GeminiBackend::new(key.to_string(), &m)));
         label = format!("gemini/{m}");
     } else if let Some(ref key) = openai_key {
         let m = model_name.clone().unwrap_or_else(|| "gpt-4o".into());
-        backend = Some(Box::new(OpenAiBackend::new(key.clone(), &m, openai_base.clone())));
-        label = if let Some(ref b) = openai_base { format!("openai@{b}/{m}") } else { format!("openai/{m}") };
+        backend = Some(Box::new(OpenAiBackend::new(
+            key.clone(),
+            &m,
+            openai_base.clone(),
+        )));
+        label = if let Some(ref b) = openai_base {
+            format!("openai@{b}/{m}")
+        } else {
+            format!("openai/{m}")
+        };
     } else if let Ok(base) = env::var("LM_STUDIO_URL") {
         let m = model_name.clone().unwrap_or_else(|| "local-model".into());
-        backend = Some(Box::new(OpenAiBackend::new("lm-studio".into(), &m, Some(base))));
+        backend = Some(Box::new(OpenAiBackend::new(
+            "lm-studio".into(),
+            &m,
+            Some(base),
+        )));
         label = format!("lm-studio/{m}");
     } else if let Ok(base) = env::var("OLLAMA_URL") {
         let m = model_name.unwrap_or_else(|| "llama3".into());
-        backend = Some(Box::new(OpenAiBackend::new("ollama".into(), &m, Some(base))));
+        backend = Some(Box::new(OpenAiBackend::new(
+            "ollama".into(),
+            &m,
+            Some(base),
+        )));
         label = format!("ollama/{m}");
     }
 
@@ -407,19 +477,29 @@ async fn build_cognitive(
         }
         None => {
             eprintln!("{YELLOW}⚠ LLM: Not configured — using Mock{RESET}");
-            eprintln!("  Set ANTHROPIC_API_KEY, DEEPSEEK_API_KEY, GEMINI_API_KEY, OPENAI_API_KEY, LM_STUDIO_URL, or OLLAMA_URL");
-            Ok(Arc::new(CognitiveEngine::new(Some(Box::new(MockBackend::new("mock"))), None).await?))
+            eprintln!(
+                "  Set ANTHROPIC_API_KEY, DEEPSEEK_API_KEY, GEMINI_API_KEY, OPENAI_API_KEY, LM_STUDIO_URL, or OLLAMA_URL"
+            );
+            Ok(Arc::new(
+                CognitiveEngine::new(Some(Box::new(MockBackend::new("mock"))), None).await?,
+            ))
         }
     }
 }
 
 // ── Task runner ──
 
-async fn run_cli_task(task: String, orch: Arc<tokio::sync::Mutex<OrchestratorEngine>>) -> Result<(), Box<dyn std::error::Error>> {
+async fn run_cli_task(
+    task: String,
+    orch: Arc<tokio::sync::Mutex<OrchestratorEngine>>,
+) -> Result<(), Box<dyn std::error::Error>> {
     let isa = IdealStateArtifact {
         id: format!("cli-{}", uuid::Uuid::new_v4()),
-        goal: task.clone(), acceptance_criteria: vec![], constraints: vec![],
-        expected_artifacts: vec![], phase_requirements: Default::default(),
+        goal: task.clone(),
+        acceptance_criteria: vec![],
+        constraints: vec![],
+        expected_artifacts: vec![],
+        phase_requirements: Default::default(),
         fully_autonomous: true,
     };
 
@@ -443,10 +523,13 @@ async fn run_cli_task(task: String, orch: Arc<tokio::sync::Mutex<OrchestratorEng
 
 // ── Voice task runner ──
 
-async fn run_voice_task(prompt: Option<String>, _duration: u64) -> Result<(), Box<dyn std::error::Error>> {
-    let text = stt::transcribe_mic().await.map_err(|e| {
-        Box::new(std::io::Error::other(format!("Voice error: {e}")))
-    })?;
+async fn run_voice_task(
+    prompt: Option<String>,
+    _duration: u64,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let text = stt::transcribe_mic()
+        .await
+        .map_err(|e| Box::new(std::io::Error::other(format!("Voice error: {e}"))))?;
     let task = if let Some(ref p) = prompt {
         format!("{p} {text}")
     } else {
@@ -485,9 +568,7 @@ async fn run_voice_interactive(
         );
     }
 
-    println!(
-        "  {GREEN}Say '{CYAN}exit{GREEN}' or '{CYAN}quit{GREEN}' to stop.{RESET}"
-    );
+    println!("  {GREEN}Say '{CYAN}exit{GREEN}' or '{CYAN}quit{GREEN}' to stop.{RESET}");
     println!("  {GREEN}Max {max_turns} turns.{RESET}\n");
 
     let exit_words = ["exit", "quit", "goodbye", "stop", "done"];
@@ -580,9 +661,15 @@ async fn run_voice_interactive(
 fn init_project(dir: &str) -> Result<(), Box<dyn std::error::Error>> {
     let path = std::path::PathBuf::from(dir);
     std::fs::create_dir_all(&path)?;
-    std::fs::write(path.join("candor.toml"), "[server]\nhost = \"0.0.0.0\"\nport = 31337\ncheckpoint_dir = \"/tmp/candor-checkpoints\"\nmax_iterations = 100\n\n[sandbox]\nscratchpad_dir = \"/tmp/agent_scratchpad\"\ndefault_timeout_secs = 15\ndefault_memory_mb = 256\n\n[inference]\n# anthropic_api_key = \"sk-ant-...\"\n# openai_api_key = \"sk-...\"\nembedding_model = \"all-MiniLM-L6-v2\"\nembedding_dim = 384\n\n[memory]\nbackend = \"mem\"\ncompaction_token_limit = 135000\n")?;
+    std::fs::write(
+        path.join("candor.toml"),
+        "[server]\nhost = \"0.0.0.0\"\nport = 31337\ncheckpoint_dir = \"/tmp/candor-checkpoints\"\nmax_iterations = 100\n\n[sandbox]\nscratchpad_dir = \"/tmp/agent_scratchpad\"\ndefault_timeout_secs = 15\ndefault_memory_mb = 256\n\n[inference]\n# anthropic_api_key = \"sk-ant-...\"\n# openai_api_key = \"sk-...\"\nembedding_model = \"all-MiniLM-L6-v2\"\nembedding_dim = 384\n\n[memory]\nbackend = \"mem\"\ncompaction_token_limit = 135000\n",
+    )?;
     std::fs::write(path.join(".gitignore"), "/target/\n.env\n/tmp/\n")?;
-    println!("{GREEN}✓{RESET} Project initialized at {BOLD}{}{RESET}", path.display());
+    println!(
+        "{GREEN}✓{RESET} Project initialized at {BOLD}{}{RESET}",
+        path.display()
+    );
     println!("  candor task \"build something\"");
     Ok(())
 }
@@ -596,11 +683,42 @@ async fn run_health_check(orch: Arc<tokio::sync::Mutex<OrchestratorEngine>>) {
 
     println!();
     println!("{BOLD}  Candor AI — Health Check{RESET}\n");
-    println!("  {BOLD}LLM:{RESET}      {}", if frontier { format!("{GREEN}Connected{RESET}") } else { format!("{YELLOW}Not configured{RESET}") });
-    println!("  {BOLD}Local:{RESET}    {}", if local { format!("{GREEN}Connected{RESET}") } else { format!("{YELLOW}Not configured{RESET}") });
-    println!("  {BOLD}Sandbox:{RESET}  {}", if o.sandbox.native_engine().is_bwrap_available() { "Bubblewrap" } else { "Direct" });
-    println!("  {BOLD}Sentinel:{RESET} {}", if o.sentinel.is_active() { format!("{GREEN}Active{RESET}") } else { format!("{YELLOW}Inactive{RESET}") });
-    println!("  {BOLD}Tools:{RESET}    {} registered", o.tools.tool_count());
+    println!(
+        "  {BOLD}LLM:{RESET}      {}",
+        if frontier {
+            format!("{GREEN}Connected{RESET}")
+        } else {
+            format!("{YELLOW}Not configured{RESET}")
+        }
+    );
+    println!(
+        "  {BOLD}Local:{RESET}    {}",
+        if local {
+            format!("{GREEN}Connected{RESET}")
+        } else {
+            format!("{YELLOW}Not configured{RESET}")
+        }
+    );
+    println!(
+        "  {BOLD}Sandbox:{RESET}  {}",
+        if o.sandbox.native_engine().is_bwrap_available() {
+            "Bubblewrap"
+        } else {
+            "Direct"
+        }
+    );
+    println!(
+        "  {BOLD}Sentinel:{RESET} {}",
+        if o.sentinel.is_active() {
+            format!("{GREEN}Active{RESET}")
+        } else {
+            format!("{YELLOW}Inactive{RESET}")
+        }
+    );
+    println!(
+        "  {BOLD}Tools:{RESET}    {} registered",
+        o.tools.tool_count()
+    );
     println!();
     println!("{GREEN}  All systems operational.{RESET}");
 }
@@ -613,7 +731,8 @@ async fn check_version() -> Option<String> {
     let url = "https://api.github.com/repos/iknowkungfubar/candor-ai/releases/latest";
     let client = reqwest::Client::builder()
         .user_agent("candor-ai-doctor")
-        .build().ok()?;
+        .build()
+        .ok()?;
     let resp = client.get(url).send().await.ok()?;
     let json: serde_json::Value = resp.json().await.ok()?;
     let latest = json.get("tag_name")?.as_str()?.trim_start_matches('v');
@@ -631,7 +750,10 @@ async fn run_doctor() {
         ("cargo", check_cmd("cargo")),
         ("git", check_cmd("git")),
         ("bubblewrap", check_cmd("bwrap")),
-        ("whisper", check_cmd("whisper-cpp") || check_cmd("whisper-cli") || check_cmd("whisper")),
+        (
+            "whisper",
+            check_cmd("whisper-cpp") || check_cmd("whisper-cli") || check_cmd("whisper"),
+        ),
         ("piper-tts", check_cmd("piper")),
         ("espeak-ng", check_cmd("espeak-ng") || check_cmd("espeak")),
         ("aplay", check_cmd("aplay")),
@@ -641,13 +763,23 @@ async fn run_doctor() {
     ];
     let all_ok = checks.iter().all(|(_, ok)| *ok);
     for (name, ok) in &checks {
-        println!("  {} {name}", if *ok { format!("{GREEN}✓{RESET}") } else { format!("{YELLOW}○{RESET}") });
+        println!(
+            "  {} {name}",
+            if *ok {
+                format!("{GREEN}✓{RESET}")
+            } else {
+                format!("{YELLOW}○{RESET}")
+            }
+        );
     }
     println!();
     // Version check
     match check_version().await {
         Some(update) => println!("  {YELLOW}⚠ Update available: {update}{RESET}"),
-        None => println!("  {GREEN}✓ Up to date (v{}){RESET}", env!("CARGO_PKG_VERSION")),
+        None => println!(
+            "  {GREEN}✓ Up to date (v{}){RESET}",
+            env!("CARGO_PKG_VERSION")
+        ),
     }
     println!();
     if all_ok {

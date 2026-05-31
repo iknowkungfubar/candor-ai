@@ -1,8 +1,8 @@
+use candor_sandbox::cross_platform::{Backoff, CircuitBreaker, PlatformInfo, SandboxType};
+use candor_sandbox::policy::SandboxPolicyBuilder;
 /// Phase 2 integration tests: portable isolation chamber.
 /// Tests WASM fuel limits, cross-platform sandbox, bubblewrap network isolation.
 use candor_sandbox::{SandboxPolicy, ToolSandbox};
-use candor_sandbox::cross_platform::{CircuitBreaker, Backoff, PlatformInfo, SandboxType};
-use candor_sandbox::policy::SandboxPolicyBuilder;
 use std::time::Duration;
 
 // ── Fuel Limit Configuration ──
@@ -15,26 +15,20 @@ fn test_fuel_limit_default() {
 
 #[test]
 fn test_fuel_limit_custom() {
-    let policy = SandboxPolicyBuilder::new()
-        .fuel_limit(5_000_000)
-        .build();
+    let policy = SandboxPolicyBuilder::new().fuel_limit(5_000_000).build();
     assert_eq!(policy.fuel_limit, Some(5_000_000));
 }
 
 #[test]
 fn test_fuel_limit_zero_traps_immediately() {
     // A fuel limit of 0 should trap on first instruction
-    let policy = SandboxPolicyBuilder::new()
-        .fuel_limit(0)
-        .build();
+    let policy = SandboxPolicyBuilder::new().fuel_limit(0).build();
     assert_eq!(policy.fuel_limit, Some(0));
 }
 
 #[test]
 fn test_wasm_backend_uses_fuel_from_policy() {
-    let policy = SandboxPolicyBuilder::new()
-        .fuel_limit(42)
-        .build();
+    let policy = SandboxPolicyBuilder::new().fuel_limit(42).build();
     let backend = candor_sandbox::wasm_exec::WasmBackend::new(policy.clone());
     assert_eq!(backend.policy().fuel_limit, Some(42));
 }
@@ -47,7 +41,10 @@ fn test_platform_detection_returns_valid() {
     assert!(!info.os.is_empty());
     // Should be one of the valid sandbox types
     match info.sandbox_type {
-        SandboxType::Bubblewrap | SandboxType::Seatbelt | SandboxType::AppContainer | SandboxType::Direct => {}
+        SandboxType::Bubblewrap
+        | SandboxType::Seatbelt
+        | SandboxType::AppContainer
+        | SandboxType::Direct => {}
     }
 }
 
@@ -71,9 +68,7 @@ fn test_sandbox_policy_denies_network_by_default() {
 
 #[test]
 fn test_sandbox_policy_allows_network_when_configured() {
-    let policy = SandboxPolicyBuilder::new()
-        .allow_network()
-        .build();
+    let policy = SandboxPolicyBuilder::new().allow_network().build();
     assert!(policy.network_allowed);
 }
 
@@ -109,7 +104,10 @@ async fn test_tool_sandbox_with_policy() {
 async fn test_sandbox_shell_execution() {
     let sandbox = ToolSandbox::new().unwrap();
     let result = sandbox
-        .execute_tool("echo isolation_test", candor_sandbox::unified::ExecLanguage::Shell)
+        .execute_tool(
+            "echo isolation_test",
+            candor_sandbox::unified::ExecLanguage::Shell,
+        )
         .await;
     assert!(result.is_ok());
     assert!(result.unwrap().contains("isolation_test"));
@@ -172,4 +170,4 @@ fn test_backoff_reset() {
 }
 
 // Re-export for use in tests
-use candor_sandbox::cross_platform as cross_platform;
+use candor_sandbox::cross_platform;

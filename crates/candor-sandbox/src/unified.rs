@@ -119,16 +119,11 @@ impl ToolSandbox {
     }
 
     #[instrument(skip(self))]
-    pub async fn execute(
-        &self,
-        request: &ExecRequest,
-    ) -> Result<ExecResult, CoreError> {
+    pub async fn execute(&self, request: &ExecRequest) -> Result<ExecResult, CoreError> {
         match request.language {
             ExecLanguage::Wasm => {
                 let wasm_path = request.wasm_path.as_ref().ok_or_else(|| {
-                    CoreError::Internal(
-                        "wasm_path required for WASM language execution".into(),
-                    )
+                    CoreError::Internal("wasm_path required for WASM language execution".into())
                 })?;
 
                 let wasm_req = WasmExecRequest {

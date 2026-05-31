@@ -6,9 +6,7 @@
 use serde::{Deserialize, Serialize};
 
 /// The canonical seven phases.
-#[derive(
-    Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize,
-)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Phase {
     /// Gather all relevant context: files, docs, environment state.
     Observe,
@@ -73,10 +71,7 @@ impl Phase {
 
     /// Whether this phase requires sentinel approval.
     pub fn requires_sentinel(&self) -> bool {
-        matches!(
-            self,
-            Phase::Build | Phase::Execute | Phase::Verify
-        )
+        matches!(self, Phase::Build | Phase::Execute | Phase::Verify)
     }
 }
 

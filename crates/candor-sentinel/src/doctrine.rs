@@ -38,7 +38,13 @@ pub fn enforce_doctrine(action: &AgentAction, context: &str) -> DoctrineCheck {
     }
 
     // 4. Failure Is the Primary Use Case — design for failure first
-    if !action.is_reversible && matches!(action.action_type, candor_core::protocol::ActionType::FileWrite | candor_core::protocol::ActionType::FileDelete) {
+    if !action.is_reversible
+        && matches!(
+            action.action_type,
+            candor_core::protocol::ActionType::FileWrite
+                | candor_core::protocol::ActionType::FileDelete
+        )
+    {
         warnings.push(
             "Failure Is the Primary Use Case: Irreversible action — ensure rollback is possible."
                 .into(),
@@ -76,15 +82,21 @@ pub fn enforce_doctrine(action: &AgentAction, context: &str) -> DoctrineCheck {
     // (Enforced by sentinel deterministic rules — force-push, rm -rf, etc.)
 
     // 10. Reversibility Matters More Than Speed — undo is cheap
-    if matches!(action.action_type, candor_core::protocol::ActionType::ForcePush) {
+    if matches!(
+        action.action_type,
+        candor_core::protocol::ActionType::ForcePush
+    ) {
         violations.push(
-            "Reversibility Matters More Than Speed: Force push is irreversible. Blocked."
-                .into(),
+            "Reversibility Matters More Than Speed: Force push is irreversible. Blocked.".into(),
         );
     }
 
     let passed = violations.is_empty();
-    DoctrineCheck { passed, violations, warnings }
+    DoctrineCheck {
+        passed,
+        violations,
+        warnings,
+    }
 }
 
 fn contains_vague_claim(text: &str) -> bool {
@@ -132,13 +144,17 @@ mod tests {
     #[test]
     fn test_vague_claim_detected() {
         assert!(contains_vague_claim("This should work fine"));
-        assert!(!contains_vague_claim("The function returns Ok(()) when given valid input"));
+        assert!(!contains_vague_claim(
+            "The function returns Ok(()) when given valid input"
+        ));
     }
 
     #[test]
     fn test_marketing_language_detected() {
         assert!(contains_marketing_language("This revolutionary approach"));
-        assert!(!contains_marketing_language("The test passes with valid inputs"));
+        assert!(!contains_marketing_language(
+            "The test passes with valid inputs"
+        ));
     }
 
     #[test]
@@ -156,6 +172,11 @@ mod tests {
 
         let check = enforce_doctrine(&action, "delete this file");
         assert!(!check.passed);
-        assert!(check.warnings.iter().any(|w| w.contains("Failure Is the Primary Use Case")));
+        assert!(
+            check
+                .warnings
+                .iter()
+                .any(|w| w.contains("Failure Is the Primary Use Case"))
+        );
     }
 }

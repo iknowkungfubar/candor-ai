@@ -260,9 +260,10 @@ fn extract_header_content(header: &str, skip_keywords: &[&str]) -> String {
         .trim_start_matches('#')
         .split_whitespace()
         .filter(|word| {
-            let lower = word.trim_matches(|c: char| c.is_ascii_punctuation()).to_lowercase();
-            !skip_keywords.contains(&lower.as_str())
-                && !lower.chars().all(|c| c.is_ascii_digit())
+            let lower = word
+                .trim_matches(|c: char| c.is_ascii_punctuation())
+                .to_lowercase();
+            !skip_keywords.contains(&lower.as_str()) && !lower.chars().all(|c| c.is_ascii_digit())
         })
         .collect();
     parts.dedup();
@@ -461,7 +462,8 @@ Deliver a production-ready, highly reliable agentic harness.
 
     #[test]
     fn test_isa_constraints_extraction() {
-        let content = "# Project\n\n## 5. Constraints\n- Must compile on Linux.\n- Must not require sudo.\n";
+        let content =
+            "# Project\n\n## 5. Constraints\n- Must compile on Linux.\n- Must not require sudo.\n";
         let (_dir, path) = create_temp_md(content);
         let (goal, criteria, constraints) = load_and_parse_isa(&path);
         assert!(goal.is_empty());

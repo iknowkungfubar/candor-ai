@@ -16,25 +16,44 @@ use candor_core::state::AgentState;
 /// 1. Before any tool execution
 #[async_trait::async_trait]
 pub trait BeforeToolCallback: Send + Sync {
-    async fn before_tool(&self, action: &AgentAction, state: Arc<Mutex<AgentState>>) -> Result<(), CoreError>;
+    async fn before_tool(
+        &self,
+        action: &AgentAction,
+        state: Arc<Mutex<AgentState>>,
+    ) -> Result<(), CoreError>;
 }
 
 /// 2. After any tool execution
 #[async_trait::async_trait]
 pub trait AfterToolCallback: Send + Sync {
-    async fn after_tool(&self, action: &AgentAction, result: &str, state: Arc<Mutex<AgentState>>) -> Result<(), CoreError>;
+    async fn after_tool(
+        &self,
+        action: &AgentAction,
+        result: &str,
+        state: Arc<Mutex<AgentState>>,
+    ) -> Result<(), CoreError>;
 }
 
 /// 3. Before node transition
 #[async_trait::async_trait]
 pub trait BeforeNodeTransition: Send + Sync {
-    async fn before_transition(&self, from_node: &str, to_node: &str, state: Arc<Mutex<AgentState>>) -> Result<(), CoreError>;
+    async fn before_transition(
+        &self,
+        from_node: &str,
+        to_node: &str,
+        state: Arc<Mutex<AgentState>>,
+    ) -> Result<(), CoreError>;
 }
 
 /// 4. After node transition
 #[async_trait::async_trait]
 pub trait AfterNodeTransition: Send + Sync {
-    async fn after_transition(&self, from_node: &str, to_node: &str, state: Arc<Mutex<AgentState>>) -> Result<(), CoreError>;
+    async fn after_transition(
+        &self,
+        from_node: &str,
+        to_node: &str,
+        state: Arc<Mutex<AgentState>>,
+    ) -> Result<(), CoreError>;
 }
 
 /// 5. Checkpoint (every N iterations)
@@ -58,61 +77,95 @@ pub trait CompletionCallback: Send + Sync {
 /// 8. Before phase entry
 #[async_trait::async_trait]
 pub trait BeforePhaseEntry: Send + Sync {
-    async fn before_phase(&self, phase: &str, state: Arc<Mutex<AgentState>>) -> Result<(), CoreError>;
+    async fn before_phase(
+        &self,
+        phase: &str,
+        state: Arc<Mutex<AgentState>>,
+    ) -> Result<(), CoreError>;
 }
 
 /// 9. After phase exit
 #[async_trait::async_trait]
 pub trait AfterPhaseExit: Send + Sync {
-    async fn after_phase(&self, phase: &str, state: Arc<Mutex<AgentState>>) -> Result<(), CoreError>;
+    async fn after_phase(
+        &self,
+        phase: &str,
+        state: Arc<Mutex<AgentState>>,
+    ) -> Result<(), CoreError>;
 }
 
 /// 10. Before file read
 #[async_trait::async_trait]
 pub trait BeforeFileRead: Send + Sync {
-    async fn before_read(&self, path: &str, state: Arc<Mutex<AgentState>>) -> Result<(), CoreError>;
+    async fn before_read(&self, path: &str, state: Arc<Mutex<AgentState>>)
+    -> Result<(), CoreError>;
 }
 
 /// 11. After file write
 #[async_trait::async_trait]
 pub trait AfterFileWrite: Send + Sync {
-    async fn after_write(&self, path: &str, state: Arc<Mutex<AgentState>>) -> Result<(), CoreError>;
+    async fn after_write(&self, path: &str, state: Arc<Mutex<AgentState>>)
+    -> Result<(), CoreError>;
 }
 
 /// 12. Before git operation
 #[async_trait::async_trait]
 pub trait BeforeGitOp: Send + Sync {
-    async fn before_git(&self, operation: &str, state: Arc<Mutex<AgentState>>) -> Result<(), CoreError>;
+    async fn before_git(
+        &self,
+        operation: &str,
+        state: Arc<Mutex<AgentState>>,
+    ) -> Result<(), CoreError>;
 }
 
 /// 13. After git operation
 #[async_trait::async_trait]
 pub trait AfterGitOp: Send + Sync {
-    async fn after_git(&self, operation: &str, state: Arc<Mutex<AgentState>>) -> Result<(), CoreError>;
+    async fn after_git(
+        &self,
+        operation: &str,
+        state: Arc<Mutex<AgentState>>,
+    ) -> Result<(), CoreError>;
 }
 
 /// 14. Before sandbox execution
 #[async_trait::async_trait]
 pub trait BeforeSandboxExec: Send + Sync {
-    async fn before_sandbox(&self, code: &str, state: Arc<Mutex<AgentState>>) -> Result<(), CoreError>;
+    async fn before_sandbox(
+        &self,
+        code: &str,
+        state: Arc<Mutex<AgentState>>,
+    ) -> Result<(), CoreError>;
 }
 
 /// 15. After sandbox execution
 #[async_trait::async_trait]
 pub trait AfterSandboxExec: Send + Sync {
-    async fn after_sandbox(&self, result: &str, state: Arc<Mutex<AgentState>>) -> Result<(), CoreError>;
+    async fn after_sandbox(
+        &self,
+        result: &str,
+        state: Arc<Mutex<AgentState>>,
+    ) -> Result<(), CoreError>;
 }
 
 /// 16. Before embedding generation
 #[async_trait::async_trait]
 pub trait BeforeEmbedding: Send + Sync {
-    async fn before_embed(&self, text: &str, state: Arc<Mutex<AgentState>>) -> Result<(), CoreError>;
+    async fn before_embed(
+        &self,
+        text: &str,
+        state: Arc<Mutex<AgentState>>,
+    ) -> Result<(), CoreError>;
 }
 
 /// 17. On loop iteration (every cycle of the execution loop)
 #[async_trait::async_trait]
 pub trait OnLoopIteration: Send + Sync {
-    async fn on_iteration(&self, count: u32, state: Arc<Mutex<AgentState>>) -> Result<(), CoreError>;
+    async fn on_iteration(
+        &self,
+        count: u32,
+        state: Arc<Mutex<AgentState>>,
+    ) -> Result<(), CoreError>;
 }
 
 // ── Full Lifecycle Hooks Registry ──
@@ -137,7 +190,6 @@ pub struct FullLifecycleHooks {
     pub before_embed: Vec<Box<dyn BeforeEmbedding>>,
     pub on_iteration: Vec<Box<dyn OnLoopIteration>>,
 }
-
 
 impl FullLifecycleHooks {
     pub fn with_before_tool(mut self, hook: Box<dyn BeforeToolCallback>) -> Self {

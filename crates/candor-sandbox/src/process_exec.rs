@@ -16,8 +16,8 @@ use tracing::{info, instrument};
 
 use candor_core::error::CoreError;
 
-use super::policy::SandboxPolicy;
 use super::cross_platform::{PlatformInfo, SandboxType};
+use super::policy::SandboxPolicy;
 
 #[derive(Debug, Clone)]
 pub enum Language {
@@ -86,7 +86,9 @@ impl ProcessBackend {
         } else if seatbelt_available {
             info!("macOS Seatbelt detected — enabling OS-level sandbox");
         } else {
-            info!("No OS-level sandbox available — falling back to direct execution with resource limits");
+            info!(
+                "No OS-level sandbox available — falling back to direct execution with resource limits"
+            );
         }
 
         Ok(Self {
@@ -121,10 +123,21 @@ impl ProcessBackend {
         };
 
         // Write code to a temp file in the scratchpad.
-        let script_path = self.scratchpad.join(format!("script_{}.{ext}", uuid::Uuid::new_v4()));
+        let script_path = self
+            .scratchpad
+            .join(format!("script_{}.{ext}", uuid::Uuid::new_v4()));
         tokio::fs::write(&script_path, &request.code)
             .await
             .map_err(|e| CoreError::Io(e.to_string()))?;
+
+        // Make the script executable so it can be run via `sh -c <path>` or `bwrap sh <path>`.
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            tokio::fs::set_permissions(&script_path, std::fs::Permissions::from_mode(0o755))
+                .await
+                .map_err(|e| CoreError::Io(format!("chmod script: {e}")))?;
+        }
 
         let result = if self.bwrap_available {
             self.execute_with_bwrap(&script_path, runtime, request)
@@ -186,9 +199,10 @@ impl ProcessBackend {
         cmd.stdout(Stdio::piped());
         cmd.stderr(Stdio::piped());
 
-        let output = cmd.output().await.map_err(|e| {
-            CoreError::Internal(format!("Failed to spawn bwrap: {e}"))
-        })?;
+        let output = cmd
+            .output()
+            .await
+            .map_err(|e| CoreError::Internal(format!("Failed to spawn bwrap: {e}")))?;
 
         let wall_time_ms = start.elapsed().as_millis() as u64;
 

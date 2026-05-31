@@ -61,10 +61,7 @@ pub async fn monitor_prompt() -> Result<String, String> {
 
     let mut analysis = String::new();
     for slug in &work_slugs {
-        let work_dir = pda::pda_home()
-            .join("MEMORY")
-            .join("WORK")
-            .join(slug);
+        let work_dir = pda::pda_home().join("MEMORY").join("WORK").join(slug);
         let isa_path = work_dir.join("ISA.md");
         if isa_path.exists()
             && let Ok(meta) = tokio::fs::metadata(&isa_path).await

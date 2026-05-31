@@ -45,11 +45,11 @@ impl AgentNode for RecoveryNode {
         &self.name
     }
 
-    async fn execute(
-        &self,
-        state: Arc<Mutex<AgentState>>,
-    ) -> Result<(), CoreError> {
-        let attempt = self.attempt.fetch_add(1, std::sync::atomic::Ordering::SeqCst) + 1;
+    async fn execute(&self, state: Arc<Mutex<AgentState>>) -> Result<(), CoreError> {
+        let attempt = self
+            .attempt
+            .fetch_add(1, std::sync::atomic::Ordering::SeqCst)
+            + 1;
 
         if attempt > self.max_retries {
             error!(
@@ -79,9 +79,7 @@ impl AgentNode for RecoveryNode {
             // Log the recovery attempt
             s.log_event(&format!(
                 "Recovery: {} (attempt {}/{})",
-                self.name,
-                attempt,
-                self.max_retries
+                self.name, attempt, self.max_retries
             ));
 
             // If we've been looping, reset compaction flag
@@ -95,10 +93,7 @@ impl AgentNode for RecoveryNode {
             drop(s);
             if let Some(ref phase) = phase_clone {
                 let mut s2 = state.lock().await;
-                s2.log_event(&format!(
-                    "Recovery: retrying from phase '{}'",
-                    phase
-                ));
+                s2.log_event(&format!("Recovery: retrying from phase '{}'", phase));
             }
         }
 

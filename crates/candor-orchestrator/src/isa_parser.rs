@@ -8,8 +8,8 @@ use std::path::Path;
 
 use candor_core::error::CoreError;
 use candor_core::ideal::{
-    AcceptanceCriterion, Constraint, ConstraintEnforcement, ExpectedArtifact,
-    IdealStateArtifact, VerificationMethod, ArtifactType,
+    AcceptanceCriterion, ArtifactType, Constraint, ConstraintEnforcement, ExpectedArtifact,
+    IdealStateArtifact, VerificationMethod,
 };
 
 /// Parse an ISA from a markdown string.
@@ -28,10 +28,7 @@ use candor_core::ideal::{
 /// ## Expected Artifacts
 /// - path/to/file: description
 /// ```
-pub fn parse_isa_from_markdown(
-    id: &str,
-    markdown: &str,
-) -> Result<IdealStateArtifact, CoreError> {
+pub fn parse_isa_from_markdown(id: &str, markdown: &str) -> Result<IdealStateArtifact, CoreError> {
     let mut goal = String::new();
     let mut criteria = Vec::new();
     let mut constraints = Vec::new();
@@ -96,10 +93,11 @@ pub fn parse_isa_from_markdown(
                 }
             }
             Some("autonomous")
-                if (trimmed.to_lowercase().contains("false") || trimmed.to_lowercase().contains("no"))
-                => {
-                    fully_autonomous = false;
-                }
+                if (trimmed.to_lowercase().contains("false")
+                    || trimmed.to_lowercase().contains("no")) =>
+            {
+                fully_autonomous = false;
+            }
             _ => {}
         }
     }
@@ -174,9 +172,12 @@ fn parse_criterion_line(line: &str) -> Option<AcceptanceCriterion> {
 
         (desc, method)
     } else {
-        (rest.to_string(), VerificationMethod::HumanConfirmation {
-            prompt: rest.to_string(),
-        })
+        (
+            rest.to_string(),
+            VerificationMethod::HumanConfirmation {
+                prompt: rest.to_string(),
+            },
+        )
     };
 
     Some(AcceptanceCriterion {

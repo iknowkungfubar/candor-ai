@@ -1,6 +1,6 @@
+use candor_core::error::CoreError;
 /// The tool system — agent capabilities.
 use std::sync::Arc;
-use candor_core::error::CoreError;
 
 /// Context passed to every tool execution.
 #[derive(Debug, Clone)]
@@ -34,10 +34,7 @@ impl ToolOutput {
         }
     }
 
-    pub fn ok_with_data(
-        output: impl Into<String>,
-        data: serde_json::Value,
-    ) -> Self {
+    pub fn ok_with_data(output: impl Into<String>, data: serde_json::Value) -> Self {
         Self {
             success: true,
             output: output.into(),
@@ -66,11 +63,7 @@ pub trait Tool: Send + Sync {
     fn description(&self) -> &str;
 
     /// Execute the tool with given arguments.
-    async fn execute(
-        &self,
-        ctx: &ToolContext,
-        args: &[String],
-    ) -> Result<ToolOutput, CoreError>;
+    async fn execute(&self, ctx: &ToolContext, args: &[String]) -> Result<ToolOutput, CoreError>;
 }
 
 /// Registry of all available tools.
@@ -88,10 +81,7 @@ impl ToolRegistry {
     }
 
     pub fn find(&self, name: &str) -> Option<Arc<dyn Tool>> {
-        self.tools
-            .iter()
-            .find(|t| t.name() == name)
-            .cloned()
+        self.tools.iter().find(|t| t.name() == name).cloned()
     }
 
     pub fn list_all(&self) -> Vec<(String, String)> {

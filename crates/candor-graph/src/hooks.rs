@@ -60,40 +60,26 @@ pub trait AfterNodeTransition: Send + Sync {
 /// Hook fired when the graph hits a checkpoint (every N iterations).
 #[async_trait::async_trait]
 pub trait CheckpointCallback: Send + Sync {
-    async fn on_checkpoint(
-        &self,
-        state: Arc<Mutex<AgentState>>,
-    ) -> Result<(), CoreError>;
+    async fn on_checkpoint(&self, state: Arc<Mutex<AgentState>>) -> Result<(), CoreError>;
 }
 
 /// Hook fired when an error occurs during execution.
 #[async_trait::async_trait]
 pub trait ErrorCallback: Send + Sync {
-    async fn on_error(
-        &self,
-        error: &CoreError,
-        node: &str,
-        state: Arc<Mutex<AgentState>>,
-    );
+    async fn on_error(&self, error: &CoreError, node: &str, state: Arc<Mutex<AgentState>>);
 }
 
 /// Hook fired when the graph execution completes successfully.
 #[async_trait::async_trait]
 pub trait CompletionCallback: Send + Sync {
-    async fn on_complete(
-        &self,
-        state: Arc<Mutex<AgentState>>,
-    ) -> Result<(), CoreError>;
+    async fn on_complete(&self, state: Arc<Mutex<AgentState>>) -> Result<(), CoreError>;
 }
 
 /// Hook fired before the Execute phase to require human-in-the-loop confirmation.
 /// If this returns Err, execution is paused until the operator approves.
 #[async_trait::async_trait]
 pub trait BeforeExecuteConfirmation: Send + Sync {
-    async fn before_execute(
-        &self,
-        state: Arc<Mutex<AgentState>>,
-    ) -> Result<(), CoreError>;
+    async fn before_execute(&self, state: Arc<Mutex<AgentState>>) -> Result<(), CoreError>;
 }
 
 /// The full set of lifecycle hooks registered on the graph runner.
@@ -109,20 +95,13 @@ pub struct LifecycleHooks {
     pub before_execute: Vec<Box<dyn BeforeExecuteConfirmation>>,
 }
 
-
 impl LifecycleHooks {
-    pub fn with_before_tool(
-        mut self,
-        hook: Box<dyn BeforeToolCallback>,
-    ) -> Self {
+    pub fn with_before_tool(mut self, hook: Box<dyn BeforeToolCallback>) -> Self {
         self.before_tool.push(hook);
         self
     }
 
-    pub fn with_after_tool(
-        mut self,
-        hook: Box<dyn AfterToolCallback>,
-    ) -> Self {
+    pub fn with_after_tool(mut self, hook: Box<dyn AfterToolCallback>) -> Self {
         self.after_tool.push(hook);
         self
     }

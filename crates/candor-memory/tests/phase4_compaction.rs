@@ -1,9 +1,8 @@
-/// Phase 4 integration tests: context compaction + persistence.
-
-use candor_core::state::AgentState;
-use candor_memory::store::MemorySystem;
-use candor_memory::schema::schema_queries;
 use candor_cognitive::deterministic_embed;
+/// Phase 4 integration tests: context compaction + persistence.
+use candor_core::state::AgentState;
+use candor_memory::schema::schema_queries;
+use candor_memory::store::MemorySystem;
 
 // ── SurrealDB kv-mem initialization ──
 
@@ -20,11 +19,13 @@ async fn test_memory_store_and_retrieve() {
     let memory = MemorySystem::new(384).await.unwrap();
     let embedding = vec![0.1; 384];
 
-    memory.store_memory("test-proj".into(), "test content".into(), embedding.clone())
+    memory
+        .store_memory("test-proj".into(), "test content".into(), embedding.clone())
         .await
         .unwrap();
 
-    let results = memory.retrieve_context("test-proj", embedding, 5)
+    let results = memory
+        .retrieve_context("test-proj", embedding, 5)
         .await
         .unwrap();
     assert_eq!(results.len(), 1);
@@ -38,8 +39,14 @@ async fn test_project_isolation() {
     let emb_a = vec![0.1; 384];
     let emb_b = vec![0.2; 384];
 
-    memory.store_memory("proj-a".into(), "A data".into(), emb_a.clone()).await.unwrap();
-    memory.store_memory("proj-b".into(), "B data".into(), emb_b.clone()).await.unwrap();
+    memory
+        .store_memory("proj-a".into(), "A data".into(), emb_a.clone())
+        .await
+        .unwrap();
+    memory
+        .store_memory("proj-b".into(), "B data".into(), emb_b.clone())
+        .await
+        .unwrap();
 
     let results = memory.retrieve_context("proj-a", emb_a, 10).await.unwrap();
     assert_eq!(results.len(), 1);
@@ -51,7 +58,10 @@ async fn test_delete_project_memories() {
     let memory = MemorySystem::new(384).await.unwrap();
     let emb = vec![0.1; 384];
 
-    memory.store_memory("temp".into(), "temp data".into(), emb.clone()).await.unwrap();
+    memory
+        .store_memory("temp".into(), "temp data".into(), emb.clone())
+        .await
+        .unwrap();
     memory.delete_project_memories("temp").await.unwrap();
 
     let results = memory.retrieve_context("temp", emb, 5).await.unwrap();
@@ -102,7 +112,9 @@ fn test_token_limit_breached() {
 fn test_auto_compaction() {
     let mut state = AgentState::default();
     for i in 0..100 {
-        state.append_message(&format!("message number {i} with padding to make it longer and more realistic"));
+        state.append_message(&format!(
+            "message number {i} with padding to make it longer and more realistic"
+        ));
     }
     let original_count = state.message_history.len();
 
@@ -116,7 +128,10 @@ fn test_execution_log_storage() {
     let rt = tokio::runtime::Runtime::new().unwrap();
     rt.block_on(async {
         let memory = MemorySystem::new(384).await.unwrap();
-        memory.store_execution_log("session-1", "build", "cargo build", "ok").await.unwrap();
+        memory
+            .store_execution_log("session-1", "build", "cargo build", "ok")
+            .await
+            .unwrap();
         // No assertion needed — just verify no panic
     });
 }

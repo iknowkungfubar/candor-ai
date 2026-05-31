@@ -1,8 +1,8 @@
 /// Rust integration tests for candor-core.
 use candor_core::error::CoreError;
 use candor_core::ideal::{
-    AcceptanceCriterion, ArtifactType, Constraint, ConstraintEnforcement,
-    ExpectedArtifact, IdealStateArtifact, VerificationMethod,
+    AcceptanceCriterion, ArtifactType, Constraint, ConstraintEnforcement, ExpectedArtifact,
+    IdealStateArtifact, VerificationMethod,
 };
 use candor_core::protocol::{ActionType, AgentAction};
 use candor_core::state::AgentState;

@@ -10,19 +10,17 @@ pub struct ReadFileTool;
 
 #[async_trait::async_trait]
 impl Tool for ReadFileTool {
-    fn name(&self) -> &str { "read_file" }
+    fn name(&self) -> &str {
+        "read_file"
+    }
     fn description(&self) -> &str {
         "Read contents of a file. Args: <path> [max_lines]"
     }
 
-    async fn execute(
-        &self,
-        ctx: &ToolContext,
-        args: &[String],
-    ) -> Result<ToolOutput, CoreError> {
-        let path = args.first().ok_or_else(|| {
-            CoreError::Internal("read_file requires a path argument".into())
-        })?;
+    async fn execute(&self, ctx: &ToolContext, args: &[String]) -> Result<ToolOutput, CoreError> {
+        let path = args
+            .first()
+            .ok_or_else(|| CoreError::Internal("read_file requires a path argument".into()))?;
         let max_lines: usize = args.get(1).and_then(|s| s.parse().ok()).unwrap_or(500);
 
         let full_path = PathBuf::from(&ctx.workdir).join(path);
@@ -34,19 +32,12 @@ impl Tool for ReadFileTool {
 
         let lines: Vec<&str> = content.lines().take(max_lines).collect();
         let truncated = if content.lines().count() > max_lines {
-            format!(
-                "\n... (truncated, {} total lines)",
-                content.lines().count()
-            )
+            format!("\n... (truncated, {} total lines)", content.lines().count())
         } else {
             String::new()
         };
 
-        Ok(ToolOutput::ok(format!(
-            "{}{}",
-            lines.join("\n"),
-            truncated
-        )))
+        Ok(ToolOutput::ok(format!("{}{}", lines.join("\n"), truncated)))
     }
 }
 
@@ -54,19 +45,17 @@ pub struct WriteFileTool;
 
 #[async_trait::async_trait]
 impl Tool for WriteFileTool {
-    fn name(&self) -> &str { "write_file" }
+    fn name(&self) -> &str {
+        "write_file"
+    }
     fn description(&self) -> &str {
         "Write content to a file. Args: <path> <content>"
     }
 
-    async fn execute(
-        &self,
-        ctx: &ToolContext,
-        args: &[String],
-    ) -> Result<ToolOutput, CoreError> {
-        let path = args.first().ok_or_else(|| {
-            CoreError::Internal("write_file requires a path argument".into())
-        })?;
+    async fn execute(&self, ctx: &ToolContext, args: &[String]) -> Result<ToolOutput, CoreError> {
+        let path = args
+            .first()
+            .ok_or_else(|| CoreError::Internal("write_file requires a path argument".into()))?;
         let content = args.get(1).cloned().unwrap_or_default();
 
         let full_path = PathBuf::from(&ctx.workdir).join(path);
@@ -93,16 +82,14 @@ pub struct ListDirTool;
 
 #[async_trait::async_trait]
 impl Tool for ListDirTool {
-    fn name(&self) -> &str { "list_dir" }
+    fn name(&self) -> &str {
+        "list_dir"
+    }
     fn description(&self) -> &str {
         "List contents of a directory. Args: [path]"
     }
 
-    async fn execute(
-        &self,
-        ctx: &ToolContext,
-        args: &[String],
-    ) -> Result<ToolOutput, CoreError> {
+    async fn execute(&self, ctx: &ToolContext, args: &[String]) -> Result<ToolOutput, CoreError> {
         let rel_path = args.first().map(|s| s.as_str()).unwrap_or(".");
         let full_path = PathBuf::from(&ctx.workdir).join(rel_path);
 

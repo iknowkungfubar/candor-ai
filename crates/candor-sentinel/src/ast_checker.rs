@@ -75,16 +75,30 @@ fn is_fn_def(line: &str) -> bool {
     }
     // Match `fn name(...` at start (possibly with pub/async/unsafe/extern modifiers)
     let stripped = strip_visibility_and_modifiers(trimmed);
-    stripped.starts_with("fn ") && stripped[3..].trim_start().chars().next().is_some_and(|c| c.is_alphabetic() || c == '_')
+    stripped.starts_with("fn ")
+        && stripped[3..]
+            .trim_start()
+            .chars()
+            .next()
+            .is_some_and(|c| c.is_alphabetic() || c == '_')
 }
 
 fn strip_visibility_and_modifiers(s: &str) -> &str {
     let mut s = s.trim_start();
     loop {
         let before = s;
-        for prefix in &["pub ", "pub(crate) ", "pub(super) ", "pub(self) ",
-                          "async ", "unsafe ", "extern ", "const ", "default ",
-                          "override "] {
+        for prefix in &[
+            "pub ",
+            "pub(crate) ",
+            "pub(super) ",
+            "pub(self) ",
+            "async ",
+            "unsafe ",
+            "extern ",
+            "const ",
+            "default ",
+            "override ",
+        ] {
             if let Some(rest) = s.strip_prefix(prefix) {
                 s = rest;
                 break;
@@ -92,9 +106,10 @@ fn strip_visibility_and_modifiers(s: &str) -> &str {
         }
         // Also handle pub(in path) etc — simplified: just skip "pub(" ... ")"
         if s.starts_with("pub(")
-            && let Some(close) = s.find(')') {
-                s = s[close + 1..].trim_start();
-            }
+            && let Some(close) = s.find(')')
+        {
+            s = s[close + 1..].trim_start();
+        }
         if s == before {
             break;
         }
@@ -112,7 +127,11 @@ fn extract_fn_name(line: &str) -> Option<String> {
         if let Some(paren) = after_fn.find('(') {
             let name_candidate = after_fn[..paren].trim();
             // Strip generics like 'name<T>'
-            let name = name_candidate.split('<').next().unwrap_or(name_candidate).trim();
+            let name = name_candidate
+                .split('<')
+                .next()
+                .unwrap_or(name_candidate)
+                .trim();
             if !name.is_empty() && name.chars().all(|c| c.is_alphanumeric() || c == '_') {
                 return Some(name.to_string());
             }
@@ -178,7 +197,12 @@ fn has_unreachable_after(lines: &[&str], idx: usize) -> Option<String> {
 
     // Don't flag empty lines, closing braces, or comments after a return
     let current = lines[idx].trim();
-    if current.is_empty() || current == "}" || current.starts_with("//") || current.starts_with("/*") || current.starts_with('*') {
+    if current.is_empty()
+        || current == "}"
+        || current.starts_with("//")
+        || current.starts_with("/*")
+        || current.starts_with('*')
+    {
         return None;
     }
 
@@ -280,7 +304,11 @@ fn check_over_abstraction(
                     if let Some(called_name) = clean_stmt.split('(').next() {
                         let called_name = called_name.trim();
                         // Skip if calling self recursively
-                        if called_name != name && !called_name.is_empty() && !called_name.starts_with('&') && !called_name.starts_with('*') {
+                        if called_name != name
+                            && !called_name.is_empty()
+                            && !called_name.starts_with('&')
+                            && !called_name.starts_with('*')
+                        {
                             violations.push(RuleViolation {
                                 rule: "ast:over-abstraction".into(),
                                 description: format!(
@@ -353,7 +381,8 @@ fn check_if_else_chains(lines: &[&str]) -> Vec<RuleViolation> {
                 // Track brace depth
                 brace_depth += count_opening_braces(l) - count_closing_braces(l);
                 let has_else_if = l.contains("else if");
-                let has_else_block = (l.contains("else {") || l.contains("else{")) && !l.contains("else if");
+                let has_else_block =
+                    (l.contains("else {") || l.contains("else{")) && !l.contains("else if");
 
                 if has_else_if && !has_else_block {
                     // We should only count a new branch if the else-if starts at the
@@ -465,9 +494,10 @@ pub fn check_ast(source: &str) -> RulesCheck {
 
     for (i, line) in lines.iter().enumerate() {
         if is_fn_def(line)
-            && let Some(name) = extract_fn_name(line) {
-                fn_defs.entry(name).or_default().push(i);
-            }
+            && let Some(name) = extract_fn_name(line)
+        {
+            fn_defs.entry(name).or_default().push(i);
+        }
     }
 
     // Phase 1b: Collect defined function names for call detection
@@ -504,7 +534,9 @@ pub fn check_ast(source: &str) -> RulesCheck {
     violations.extend(check_if_else_chains(&lines));
 
     // ── Decision ──
-    let passed = violations.iter().all(|v| v.severity != ViolationSeverity::Fatal);
+    let passed = violations
+        .iter()
+        .all(|v| v.severity != ViolationSeverity::Fatal);
     RulesCheck { passed, violations }
 }
 
@@ -530,7 +562,11 @@ pub fn main() {
 }
 "#;
         let check = check_ast(source);
-        assert!(check.passed, "Clean code should pass, got violations: {:?}", check.violations);
+        assert!(
+            check.passed,
+            "Clean code should pass, got violations: {:?}",
+            check.violations
+        );
     }
 
     #[test]
@@ -549,8 +585,16 @@ fn validate(cfg: &Config) -> bool {
 }
 "#;
         let check = check_ast(source);
-        let narration_violations: Vec<_> = check.violations.iter().filter(|v| v.rule == "ast:narration-comment").collect();
-        assert!(narration_violations.len() >= 3, "Expected at least 3 narration comment violations, got {}", narration_violations.len());
+        let narration_violations: Vec<_> = check
+            .violations
+            .iter()
+            .filter(|v| v.rule == "ast:narration-comment")
+            .collect();
+        assert!(
+            narration_violations.len() >= 3,
+            "Expected at least 3 narration comment violations, got {}",
+            narration_violations.len()
+        );
     }
 
     #[test]
@@ -567,8 +611,16 @@ fn main() {
 }
 "#;
         let check = check_ast(source);
-        let single_use: Vec<_> = check.violations.iter().filter(|v| v.rule == "ast:single-use-helper").collect();
-        assert_eq!(single_use.len(), 1, "Should detect single-use helper function");
+        let single_use: Vec<_> = check
+            .violations
+            .iter()
+            .filter(|v| v.rule == "ast:single-use-helper")
+            .collect();
+        assert_eq!(
+            single_use.len(),
+            1,
+            "Should detect single-use helper function"
+        );
         assert!(single_use[0].description.contains("helper_parse_token"));
     }
 
@@ -588,7 +640,11 @@ fn another_thin_wrapper(a: i32) -> i32 {
 }
 "#;
         let check = check_ast(source);
-        let wrappers: Vec<_> = check.violations.iter().filter(|v| v.rule == "ast:over-abstraction").collect();
+        let wrappers: Vec<_> = check
+            .violations
+            .iter()
+            .filter(|v| v.rule == "ast:over-abstraction")
+            .collect();
         assert_eq!(wrappers.len(), 2, "Should detect both thin wrappers");
     }
 
@@ -603,8 +659,15 @@ fn example() {
 }
 "#;
         let check = check_ast(source);
-        let unreachable: Vec<_> = check.violations.iter().filter(|v| v.rule == "ast:unreachable-code").collect();
-        assert!(!unreachable.is_empty(), "Should detect unreachable code after return");
+        let unreachable: Vec<_> = check
+            .violations
+            .iter()
+            .filter(|v| v.rule == "ast:unreachable-code")
+            .collect();
+        assert!(
+            !unreachable.is_empty(),
+            "Should detect unreachable code after return"
+        );
     }
 
     #[test]
@@ -625,8 +688,16 @@ fn classify(value: i32) -> &'static str {
 }
 "#;
         let check = check_ast(source);
-        let chains: Vec<_> = check.violations.iter().filter(|v| v.rule == "ast:if-else-chain").collect();
-        assert!(!chains.is_empty(), "Should detect long if-else chain, got: {:?}", check.violations);
+        let chains: Vec<_> = check
+            .violations
+            .iter()
+            .filter(|v| v.rule == "ast:if-else-chain")
+            .collect();
+        assert!(
+            !chains.is_empty(),
+            "Should detect long if-else chain, got: {:?}",
+            check.violations
+        );
     }
     #[test]
     fn test_short_if_else_not_flagged() {
@@ -642,8 +713,15 @@ fn classify(value: i32) -> &'static str {
 }
 "#;
         let check = check_ast(source);
-        let chains: Vec<_> = check.violations.iter().filter(|v| v.rule == "ast:if-else-chain").collect();
-        assert!(chains.is_empty(), "Short if-else chain (2 branches) should not be flagged");
+        let chains: Vec<_> = check
+            .violations
+            .iter()
+            .filter(|v| v.rule == "ast:if-else-chain")
+            .collect();
+        assert!(
+            chains.is_empty(),
+            "Short if-else chain (2 branches) should not be flagged"
+        );
     }
 
     #[test]
@@ -662,7 +740,11 @@ fn main() {
 }
 "#;
         let check = check_ast(source);
-        let unused: Vec<_> = check.violations.iter().filter(|v| v.rule == "ast:unused-function").collect();
+        let unused: Vec<_> = check
+            .violations
+            .iter()
+            .filter(|v| v.rule == "ast:unused-function")
+            .collect();
         assert_eq!(unused.len(), 1, "Should detect one unused function");
         assert!(unused[0].description.contains("helper_internal"));
     }
@@ -684,23 +766,36 @@ fn main() {
 }
 "#;
         let check = check_ast(source);
-        let rule_types: std::collections::HashSet<&str> = check.violations
-            .iter()
-            .map(|v| v.rule.as_str())
-            .collect();
+        let rule_types: std::collections::HashSet<&str> =
+            check.violations.iter().map(|v| v.rule.as_str()).collect();
 
         // Clean code should have a helper that's called once — flag it
-        assert!(rule_types.contains("ast:narration-comment"), "Should have narration comment violations");
-        assert!(rule_types.contains("ast:unreachable-code"), "Should have unreachable code violations");
+        assert!(
+            rule_types.contains("ast:narration-comment"),
+            "Should have narration comment violations"
+        );
+        assert!(
+            rule_types.contains("ast:unreachable-code"),
+            "Should have unreachable code violations"
+        );
     }
 
     #[test]
     fn test_fn_def_extraction() {
         assert_eq!(extract_fn_name("fn foo() {}").as_deref(), Some("foo"));
-        assert_eq!(extract_fn_name("pub fn bar(x: i32) -> i32").as_deref(), Some("bar"));
+        assert_eq!(
+            extract_fn_name("pub fn bar(x: i32) -> i32").as_deref(),
+            Some("bar")
+        );
         assert_eq!(extract_fn_name("async fn baz()").as_deref(), Some("baz"));
-        assert_eq!(extract_fn_name("pub async fn qux()").as_deref(), Some("qux"));
-        assert_eq!(extract_fn_name("fn with_generics<T: Clone>(x: T)").as_deref(), Some("with_generics"));
+        assert_eq!(
+            extract_fn_name("pub async fn qux()").as_deref(),
+            Some("qux")
+        );
+        assert_eq!(
+            extract_fn_name("fn with_generics<T: Clone>(x: T)").as_deref(),
+            Some("with_generics")
+        );
         assert!(extract_fn_name("// just a comment").is_none());
         assert!(extract_fn_name("#[derive(Debug)]").is_none());
     }
@@ -708,9 +803,15 @@ fn main() {
     #[test]
     fn test_strip_modifiers() {
         assert_eq!(strip_visibility_and_modifiers("pub fn foo"), "fn foo");
-        assert_eq!(strip_visibility_and_modifiers("pub(crate) fn bar"), "fn bar");
+        assert_eq!(
+            strip_visibility_and_modifiers("pub(crate) fn bar"),
+            "fn bar"
+        );
         assert_eq!(strip_visibility_and_modifiers("async fn baz"), "fn baz");
-        assert_eq!(strip_visibility_and_modifiers("pub unsafe fn qux"), "fn qux");
+        assert_eq!(
+            strip_visibility_and_modifiers("pub unsafe fn qux"),
+            "fn qux"
+        );
     }
 
     #[test]
@@ -734,6 +835,9 @@ fn bar() {
         assert!(body.iter().any(|l| l.contains("x + y")));
 
         let body2 = collect_fn_body(&lines, 6);
-        assert!(body2.iter().any(|l| l.contains("42")), "Should collect bar's body");
+        assert!(
+            body2.iter().any(|l| l.contains("42")),
+            "Should collect bar's body"
+        );
     }
 }

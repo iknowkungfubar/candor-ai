@@ -12,9 +12,9 @@
 // 5. Git-Discipline: feature branches, no force push
 
 pub mod ast_checker;
+pub mod doctrine;
 pub mod interceptor;
 pub mod rules;
 pub mod slop_detector;
-pub mod doctrine;
 
 pub use interceptor::SentinelInterceptor;

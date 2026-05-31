@@ -1,3 +1,4 @@
+use super::util::find_on_path;
 /// Speech-to-Text module for Candor AI.
 ///
 /// Records audio from the microphone and transcribes it via whisper-cpp
@@ -9,7 +10,6 @@
 ///   candor --voice-task "prompt"  # pre-seeded task prefix
 use std::path::PathBuf;
 use std::process::Stdio;
-use super::util::find_on_path;
 
 /// Supported STT backends, probed at runtime.
 #[derive(Debug, Clone, PartialEq)]
@@ -240,12 +240,18 @@ pub async fn transcribe_mic_with_duration(duration: u64) -> Result<String, SttEr
     // Override duration via env var for this call.
     let prev = std::env::var("CANDOR_RECORD_SECONDS").ok();
     // SAFETY: Single-threaded context — no concurrent env access.
-    unsafe { std::env::set_var("CANDOR_RECORD_SECONDS", duration.to_string()); }
+    unsafe {
+        std::env::set_var("CANDOR_RECORD_SECONDS", duration.to_string());
+    }
     let result = transcribe_mic().await;
     // Restore previous value.
     match prev {
-        Some(v) => unsafe { std::env::set_var("CANDOR_RECORD_SECONDS", v); },
-        None => unsafe { std::env::remove_var("CANDOR_RECORD_SECONDS"); },
+        Some(v) => unsafe {
+            std::env::set_var("CANDOR_RECORD_SECONDS", v);
+        },
+        None => unsafe {
+            std::env::remove_var("CANDOR_RECORD_SECONDS");
+        },
     }
     result
 }

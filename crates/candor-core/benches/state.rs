@@ -2,10 +2,10 @@
 ///
 /// These benchmarks serve as a performance regression detection suite.
 /// They run via `cargo bench --package candor-core`.
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, black_box, criterion_group, criterion_main};
 
-use candor_core::state::AgentState;
 use candor_core::ideal::{AcceptanceCriterion, IdealStateArtifact, VerificationMethod};
+use candor_core::state::AgentState;
 
 // ── AgentState benchmarks ──
 
@@ -66,15 +66,13 @@ fn bench_isa_creation(c: &mut Criterion) {
             let isa = IdealStateArtifact {
                 id: black_box("bench-test".into()),
                 goal: black_box("run a quick benchmark".into()),
-                acceptance_criteria: vec![
-                    AcceptanceCriterion {
-                        id: "c1".into(),
-                        description: "first criterion".into(),
-                        verification_method: VerificationMethod::ShellCommand {
-                            command: "ls".into(),
-                        },
+                acceptance_criteria: vec![AcceptanceCriterion {
+                    id: "c1".into(),
+                    description: "first criterion".into(),
+                    verification_method: VerificationMethod::ShellCommand {
+                        command: "ls".into(),
                     },
-                ],
+                }],
                 constraints: vec![],
                 expected_artifacts: vec![],
                 phase_requirements: Default::default(),
@@ -114,12 +112,8 @@ fn bench_isa_validate_criteria(c: &mut Criterion) {
                 for criterion in &isa.acceptance_criteria {
                     let is_valid = match &criterion.verification_method {
                         VerificationMethod::ShellCommand { command }
-                        | VerificationMethod::LintCheck { command } => {
-                            !command.trim().is_empty()
-                        }
-                        VerificationMethod::TestCase { test_name } => {
-                            !test_name.trim().is_empty()
-                        }
+                        | VerificationMethod::LintCheck { command } => !command.trim().is_empty(),
+                        VerificationMethod::TestCase { test_name } => !test_name.trim().is_empty(),
                         VerificationMethod::FileExists { path } => !path.trim().is_empty(),
                         VerificationMethod::FileMatches { path, pattern } => {
                             !path.trim().is_empty() && !pattern.trim().is_empty()

@@ -64,9 +64,6 @@ fn test_http_transport_construction() {
 
 #[test]
 fn test_stdio_transport_construction() {
-    let _transport = candor_mcp::transport::StdioTransport::new(
-        "echo".into(),
-        vec!["test".into()],
-    );
+    let _transport = candor_mcp::transport::StdioTransport::new("echo".into(), vec!["test".into()]);
     assert!(true);
 }

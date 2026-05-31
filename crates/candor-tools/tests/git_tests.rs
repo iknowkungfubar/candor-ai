@@ -1,8 +1,6 @@
 /// Tests for git tools — branch, commit, push, status.
 use candor_tools::registry::{Tool, ToolContext};
-use candor_tools::{
-    GitBranchTool, GitCommitTool, GitPushTool, GitStatusTool,
-};
+use candor_tools::{GitBranchTool, GitCommitTool, GitPushTool, GitStatusTool};
 fn make_ctx() -> ToolContext {
     ToolContext {
         workdir: std::env::current_dir()

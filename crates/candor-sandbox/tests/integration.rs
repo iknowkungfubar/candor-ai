@@ -6,7 +6,10 @@ use std::path::Path;
 async fn test_sandbox_shell_hello() {
     let sandbox = ToolSandbox::new().unwrap();
     let result = sandbox
-        .execute_tool("echo sandboxed", candor_sandbox::unified::ExecLanguage::Shell)
+        .execute_tool(
+            "echo sandboxed",
+            candor_sandbox::unified::ExecLanguage::Shell,
+        )
         .await
         .unwrap();
     assert!(result.contains("sandboxed"));

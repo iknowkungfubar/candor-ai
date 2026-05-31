@@ -1,15 +1,21 @@
+use candor_sandbox::SandboxPolicy;
+use candor_sandbox::cross_platform::{Backoff, CircuitBreaker};
+use candor_sandbox::policy::SandboxPolicyBuilder;
 /// SWE-level edge case tests for tools and sandbox.
 use candor_tools::registry::{Tool, ToolContext, ToolOutput, ToolRegistry};
-use candor_tools::{ReadFileTool, WriteFileTool, ListDirTool};
-use candor_sandbox::SandboxPolicy;
-use candor_sandbox::policy::SandboxPolicyBuilder;
-use candor_sandbox::cross_platform::{CircuitBreaker, Backoff};
+use candor_tools::{ListDirTool, ReadFileTool, WriteFileTool};
+use std::path::Path;
 use std::sync::Arc;
 use std::time::Duration;
-use std::path::Path;
 
 fn ctx() -> ToolContext {
-    ToolContext { workdir: std::env::current_dir().unwrap().to_string_lossy().to_string(), project_id: "test".into() }
+    ToolContext {
+        workdir: std::env::current_dir()
+            .unwrap()
+            .to_string_lossy()
+            .to_string(),
+        project_id: "test".into(),
+    }
 }
 
 // ── ReadFile edge cases ──
@@ -41,9 +47,15 @@ async fn write_file_no_args() {
 async fn write_file_empty_content() {
     let dir = std::env::temp_dir().join(format!("candor-test-{}", uuid::Uuid::new_v4()));
     std::fs::create_dir_all(&dir).unwrap();
-    let ctx = ToolContext { workdir: dir.to_string_lossy().to_string(), project_id: "test".into() };
+    let ctx = ToolContext {
+        workdir: dir.to_string_lossy().to_string(),
+        project_id: "test".into(),
+    };
     let tool = WriteFileTool;
-    let result = tool.execute(&ctx, &["empty.txt".into(), "".into()]).await.unwrap();
+    let result = tool
+        .execute(&ctx, &["empty.txt".into(), "".into()])
+        .await
+        .unwrap();
     assert!(result.success);
     let _ = std::fs::remove_dir_all(&dir);
 }
@@ -54,7 +66,10 @@ async fn write_file_empty_content() {
 async fn list_dir_empty() {
     let dir = std::env::temp_dir().join(format!("candor-empty-{}", uuid::Uuid::new_v4()));
     std::fs::create_dir_all(&dir).unwrap();
-    let ctx = ToolContext { workdir: dir.to_string_lossy().to_string(), project_id: "test".into() };
+    let ctx = ToolContext {
+        workdir: dir.to_string_lossy().to_string(),
+        project_id: "test".into(),
+    };
     let tool = ListDirTool;
     let result = tool.execute(&ctx, &[]).await.unwrap();
     assert!(result.success);
@@ -68,14 +83,20 @@ fn circuit_breaker_half_open_resets() {
     let cb = CircuitBreaker::new(2, Duration::from_millis(1));
     cb.record_failure();
     cb.record_failure();
-    assert_eq!(cb.state(), candor_sandbox::cross_platform::CircuitState::Open);
+    assert_eq!(
+        cb.state(),
+        candor_sandbox::cross_platform::CircuitState::Open
+    );
     // Wait for reset timeout (short enough for test)
     std::thread::sleep(Duration::from_millis(5));
     // After timeout, should transition to half-open on next allow()
     let _ = cb.allow();
     // After half-open, a success resets to closed
     cb.record_success();
-    assert_eq!(cb.state(), candor_sandbox::cross_platform::CircuitState::Closed);
+    assert_eq!(
+        cb.state(),
+        candor_sandbox::cross_platform::CircuitState::Closed
+    );
 }
 
 #[test]
@@ -88,7 +109,10 @@ fn circuit_breaker_allow_succeeds() {
 fn circuit_breaker_single_failure_stays_closed() {
     let cb = CircuitBreaker::new(3, Duration::from_secs(10));
     cb.record_failure();
-    assert_eq!(cb.state(), candor_sandbox::cross_platform::CircuitState::Closed);
+    assert_eq!(
+        cb.state(),
+        candor_sandbox::cross_platform::CircuitState::Closed
+    );
     assert!(cb.allow().is_ok());
 }
 

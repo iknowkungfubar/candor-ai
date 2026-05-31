@@ -3,8 +3,8 @@ use std::collections::HashMap;
 
 use candor_core::error::CoreError;
 use candor_core::ideal::{
-    AcceptanceCriterion, ArtifactType, ConstraintEnforcement,
-    IdealStateArtifact, VerificationMethod,
+    AcceptanceCriterion, ArtifactType, ConstraintEnforcement, IdealStateArtifact,
+    VerificationMethod,
 };
 use candor_core::protocol::{ActionType, AgentAction};
 use candor_core::state::AgentState;
@@ -207,12 +207,25 @@ fn test_isa_missing_results_treated_as_false() {
 #[test]
 fn test_verification_method_serde() {
     let methods = [
-        VerificationMethod::ShellCommand { command: "ls".into() },
-        VerificationMethod::TestCase { test_name: "my_test".into() },
-        VerificationMethod::FileExists { path: "README.md".into() },
-        VerificationMethod::FileMatches { path: "Cargo.toml".into(), pattern: "name".into() },
-        VerificationMethod::LintCheck { command: "cargo fmt --check".into() },
-        VerificationMethod::HumanConfirmation { prompt: "ok?".into() },
+        VerificationMethod::ShellCommand {
+            command: "ls".into(),
+        },
+        VerificationMethod::TestCase {
+            test_name: "my_test".into(),
+        },
+        VerificationMethod::FileExists {
+            path: "README.md".into(),
+        },
+        VerificationMethod::FileMatches {
+            path: "Cargo.toml".into(),
+            pattern: "name".into(),
+        },
+        VerificationMethod::LintCheck {
+            command: "cargo fmt --check".into(),
+        },
+        VerificationMethod::HumanConfirmation {
+            prompt: "ok?".into(),
+        },
     ];
     for m in &methods {
         let json = serde_json::to_string(m).unwrap();
@@ -228,7 +241,9 @@ fn test_artifact_type_variants() {
         ArtifactType::MarkdownDocument,
         ArtifactType::Commit,
         ArtifactType::BinaryOutput,
-        ArtifactType::Other { kind: "config".into() },
+        ArtifactType::Other {
+            kind: "config".into(),
+        },
     ];
     for t in &types {
         let json = serde_json::to_string(t).unwrap();
@@ -255,12 +270,18 @@ fn make_isa() -> IdealStateArtifact {
         goal: "test goal".into(),
         acceptance_criteria: vec![
             AcceptanceCriterion {
-                id: "c1".into(), description: "works".into(),
-                verification_method: VerificationMethod::ShellCommand { command: "true".into() },
+                id: "c1".into(),
+                description: "works".into(),
+                verification_method: VerificationMethod::ShellCommand {
+                    command: "true".into(),
+                },
             },
             AcceptanceCriterion {
-                id: "c2".into(), description: "passes tests".into(),
-                verification_method: VerificationMethod::TestCase { test_name: "all".into() },
+                id: "c2".into(),
+                description: "passes tests".into(),
+                verification_method: VerificationMethod::TestCase {
+                    test_name: "all".into(),
+                },
             },
         ],
         constraints: vec![],
@@ -275,9 +296,14 @@ fn make_isa() -> IdealStateArtifact {
 #[test]
 fn test_is_destructive_force_push() {
     let a = AgentAction {
-        id: "1".into(), action_type: ActionType::ForcePush,
-        payload: "push".into(), target_path: None, is_reversible: false,
-        scope_tags: vec![], phase: "execute".into(), sentinel_approved: false,
+        id: "1".into(),
+        action_type: ActionType::ForcePush,
+        payload: "push".into(),
+        target_path: None,
+        is_reversible: false,
+        scope_tags: vec![],
+        phase: "execute".into(),
+        sentinel_approved: false,
     };
     assert!(a.is_destructive());
 }
@@ -285,9 +311,14 @@ fn test_is_destructive_force_push() {
 #[test]
 fn test_is_destructive_file_delete() {
     let a = AgentAction {
-        id: "2".into(), action_type: ActionType::FileDelete,
-        payload: "rm".into(), target_path: Some("x".into()), is_reversible: false,
-        scope_tags: vec![], phase: "execute".into(), sentinel_approved: false,
+        id: "2".into(),
+        action_type: ActionType::FileDelete,
+        payload: "rm".into(),
+        target_path: Some("x".into()),
+        is_reversible: false,
+        scope_tags: vec![],
+        phase: "execute".into(),
+        sentinel_approved: false,
     };
     assert!(a.is_destructive());
 }
@@ -295,9 +326,14 @@ fn test_is_destructive_file_delete() {
 #[test]
 fn test_is_destructive_shell() {
     let a = AgentAction {
-        id: "3".into(), action_type: ActionType::ShellCommand,
-        payload: "rm -rf /".into(), target_path: None, is_reversible: false,
-        scope_tags: vec![], phase: "execute".into(), sentinel_approved: false,
+        id: "3".into(),
+        action_type: ActionType::ShellCommand,
+        payload: "rm -rf /".into(),
+        target_path: None,
+        is_reversible: false,
+        scope_tags: vec![],
+        phase: "execute".into(),
+        sentinel_approved: false,
     };
     assert!(a.is_destructive());
 }
@@ -305,9 +341,14 @@ fn test_is_destructive_shell() {
 #[test]
 fn test_is_destructive_db_write() {
     let a = AgentAction {
-        id: "4".into(), action_type: ActionType::DatabaseWrite,
-        payload: "INSERT".into(), target_path: None, is_reversible: false,
-        scope_tags: vec![], phase: "execute".into(), sentinel_approved: false,
+        id: "4".into(),
+        action_type: ActionType::DatabaseWrite,
+        payload: "INSERT".into(),
+        target_path: None,
+        is_reversible: false,
+        scope_tags: vec![],
+        phase: "execute".into(),
+        sentinel_approved: false,
     };
     assert!(a.is_destructive());
 }
@@ -315,9 +356,14 @@ fn test_is_destructive_db_write() {
 #[test]
 fn test_is_not_destructive_file_write() {
     let a = AgentAction {
-        id: "5".into(), action_type: ActionType::FileWrite,
-        payload: "write".into(), target_path: Some("x".into()), is_reversible: true,
-        scope_tags: vec![], phase: "build".into(), sentinel_approved: false,
+        id: "5".into(),
+        action_type: ActionType::FileWrite,
+        payload: "write".into(),
+        target_path: Some("x".into()),
+        is_reversible: true,
+        scope_tags: vec![],
+        phase: "build".into(),
+        sentinel_approved: false,
     };
     assert!(!a.is_destructive());
 }
@@ -325,9 +371,14 @@ fn test_is_not_destructive_file_write() {
 #[test]
 fn test_is_not_destructive_generate_code() {
     let a = AgentAction {
-        id: "6".into(), action_type: ActionType::GenerateCode,
-        payload: "fn main() {}".into(), target_path: None, is_reversible: true,
-        scope_tags: vec![], phase: "build".into(), sentinel_approved: false,
+        id: "6".into(),
+        action_type: ActionType::GenerateCode,
+        payload: "fn main() {}".into(),
+        target_path: None,
+        is_reversible: true,
+        scope_tags: vec![],
+        phase: "build".into(),
+        sentinel_approved: false,
     };
     assert!(!a.is_destructive());
 }
@@ -335,12 +386,21 @@ fn test_is_not_destructive_generate_code() {
 #[test]
 fn test_action_type_serde_all() {
     let types = [
-        ActionType::GenerateCode, ActionType::ShellCommand,
-        ActionType::FileWrite, ActionType::FileDelete,
-        ActionType::GitCommit, ActionType::GitPush, ActionType::ForcePush,
-        ActionType::HttpRequest, ActionType::DatabaseRead, ActionType::DatabaseWrite,
-        ActionType::SandboxExecution, ActionType::ApprovalRequest,
-        ActionType::MemoryStore, ActionType::MemoryRetrieve, ActionType::SentinelAudit,
+        ActionType::GenerateCode,
+        ActionType::ShellCommand,
+        ActionType::FileWrite,
+        ActionType::FileDelete,
+        ActionType::GitCommit,
+        ActionType::GitPush,
+        ActionType::ForcePush,
+        ActionType::HttpRequest,
+        ActionType::DatabaseRead,
+        ActionType::DatabaseWrite,
+        ActionType::SandboxExecution,
+        ActionType::ApprovalRequest,
+        ActionType::MemoryStore,
+        ActionType::MemoryRetrieve,
+        ActionType::SentinelAudit,
     ];
     for t in &types {
         let json = serde_json::to_string(t).unwrap();

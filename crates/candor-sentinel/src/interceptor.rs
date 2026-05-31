@@ -17,7 +17,7 @@ use candor_core::protocol::AgentAction;
 use candor_core::state::AgentState;
 use candor_graph::hooks::BeforeToolCallback;
 
-use super::rules::{enforce_deterministic_rules, check_conventional_commit};
+use super::rules::{check_conventional_commit, enforce_deterministic_rules};
 use super::slop_detector;
 
 /// The Sentinel interceptor — a sidecar that audits agent actions.
@@ -78,10 +78,7 @@ impl SentinelInterceptor {
     ///
     /// Validates Git-Discipline and Scope-Lock. Runs before any
     /// async audit to fail fast on clear violations.
-    fn enforce_deterministic_rules_sync(
-        &self,
-        payload: &str,
-    ) -> Result<(), CoreError> {
+    fn enforce_deterministic_rules_sync(&self, payload: &str) -> Result<(), CoreError> {
         let check = enforce_deterministic_rules(payload, &self.valid_scopes);
 
         if !check.passed {
@@ -108,10 +105,7 @@ impl SentinelInterceptor {
     /// 1. Synchronous deterministic regex rules (fail fast)
     /// 2. Asynchronous semantic slop detection via local classifier
     #[instrument(skip(self))]
-    pub async fn evaluate_payload(
-        &self,
-        code_payload: String,
-    ) -> Result<(), CoreError> {
+    pub async fn evaluate_payload(&self, code_payload: String) -> Result<(), CoreError> {
         if !self.active {
             info!("Sentinel inactive — skipping audit");
             return Ok(());
@@ -153,10 +147,7 @@ impl SentinelInterceptor {
     }
 
     /// Evaluate an AgentAction through the full sentinel pipeline.
-    pub async fn evaluate_action(
-        &self,
-        action: &AgentAction,
-    ) -> Result<(), CoreError> {
+    pub async fn evaluate_action(&self, action: &AgentAction) -> Result<(), CoreError> {
         // For commit actions, also validate the commit message format.
         if matches!(
             action.action_type,

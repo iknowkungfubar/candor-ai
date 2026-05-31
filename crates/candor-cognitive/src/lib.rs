@@ -9,15 +9,15 @@
 // - Local quantized models via mistral.rs for high-volume tasks
 // - Semantic embeddings via fastembed/ONNX
 
-pub mod engine;
-pub mod embedding;
 pub mod backends;
+pub mod embedding;
+pub mod engine;
 pub mod local;
 pub mod real_embed;
 
 pub use backends::{
-    AnthropicBackend, DeepSeekBackend, GeminiBackend, LlmBackend, LlmRequest,
-    LlmResponse, MockBackend, OpenAiBackend,
+    AnthropicBackend, DeepSeekBackend, GeminiBackend, LlmBackend, LlmRequest, LlmResponse,
+    MockBackend, OpenAiBackend,
 };
 pub use embedding::TextEmbedding;
 pub use engine::CognitiveEngine;

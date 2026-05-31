@@ -107,10 +107,7 @@ impl LlmBackend for LocalBackend {
         &self.model_path
     }
 
-    async fn generate(
-        &self,
-        request: &LlmRequest,
-    ) -> Result<LlmResponse, CoreError> {
+    async fn generate(&self, request: &LlmRequest) -> Result<LlmResponse, CoreError> {
         let start = Instant::now();
 
         if !self.loaded {
@@ -141,9 +138,7 @@ impl LlmBackend for LocalBackend {
                 self.hardware.name(),
                 &request.prompt[..request.prompt.len().min(200)]
             ),
-            prompt_tokens: Some(
-                (request.prompt.len() / 4) as u32,
-            ),
+            prompt_tokens: Some((request.prompt.len() / 4) as u32),
             completion_tokens: Some(128),
             model: self.model_path.clone(),
             latency_ms: start.elapsed().as_millis() as u64,

@@ -6,9 +6,7 @@ use candor_cognitive::{CognitiveEngine, LlmBackend};
 #[test]
 fn test_phase1_cognitive_engine_new_with_mock() {
     let rt = tokio::runtime::Runtime::new().unwrap();
-    let engine = rt.block_on(async {
-        CognitiveEngine::new(None, None).await.unwrap()
-    });
+    let engine = rt.block_on(async { CognitiveEngine::new(None, None).await.unwrap() });
     assert!(engine.is_frontier_healthy() || engine.is_local_healthy() || true);
     // Note: With no backends, both are false. The engine still initializes correctly.
 }
@@ -18,7 +16,9 @@ fn test_phase1_cognitive_engine_with_mock_backend() {
     let rt = tokio::runtime::Runtime::new().unwrap();
     let backend = candor_cognitive::MockBackend::new("test response");
     let engine = rt.block_on(async {
-        candor_cognitive::CognitiveEngine::new(Some(Box::new(backend)), None).await.unwrap()
+        candor_cognitive::CognitiveEngine::new(Some(Box::new(backend)), None)
+            .await
+            .unwrap()
     });
     assert!(engine.is_frontier_healthy());
 }
@@ -28,11 +28,11 @@ fn test_phase1_routing_fallback() {
     let rt = tokio::runtime::Runtime::new().unwrap();
     let backend = candor_cognitive::MockBackend::new("PASS");
     let engine = rt.block_on(async {
-        candor_cognitive::CognitiveEngine::new(Some(Box::new(backend)), None).await.unwrap()
+        candor_cognitive::CognitiveEngine::new(Some(Box::new(backend)), None)
+            .await
+            .unwrap()
     });
-    let response = rt.block_on(async {
-        engine.generate_fast("test prompt").await.unwrap()
-    });
+    let response = rt.block_on(async { engine.generate_fast("test prompt").await.unwrap() });
     assert_eq!(response, "PASS");
 }
 

@@ -9,11 +9,11 @@
 // success criteria programmatically. The system hill-climbs toward this
 // state, replacing raw tool execution logs with tangible deliverables."
 
+pub mod engine;
+pub mod isa_parser;
 pub mod markdown_router;
 pub mod memory_nudge;
 pub mod phases;
-pub mod engine;
-pub mod isa_parser;
 pub mod skills;
 pub mod trajectory;
 

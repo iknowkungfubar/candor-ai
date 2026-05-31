@@ -6,12 +6,12 @@
 // From the design doc: "The primary bottleneck is state contention.
 // Scoping the mutex lock strictly avoids deadlocks across await boundaries."
 
-pub mod runner;
-pub mod node;
-pub mod hooks;
 pub mod checkpoint;
-pub mod recovery;
 pub mod full_hooks;
+pub mod hooks;
+pub mod node;
+pub mod recovery;
+pub mod runner;
 
 pub use full_hooks::FullLifecycleHooks;
 pub use hooks::LifecycleHooks;

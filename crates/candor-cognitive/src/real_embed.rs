@@ -1,10 +1,10 @@
+use std::collections::hash_map::DefaultHasher;
 /// Real embedding engine with fallback to deterministic hashing.
 ///
 /// When ONNX/fastembed is available, uses the actual embedding model.
 /// Otherwise falls back to a deterministic hash-based embedding that
 /// preserves semantic similarity better than zero vectors.
 use std::hash::{Hash, Hasher};
-use std::collections::hash_map::DefaultHasher;
 use tracing::info;
 
 use candor_core::error::CoreError;
@@ -50,9 +50,7 @@ pub fn deterministic_embed(text: &str, dim: usize) -> Vec<f32> {
 }
 
 /// Create a real embedding engine, preferring ONNX if available.
-pub fn create_embedding_engine(
-    opts: EmbeddingOptions,
-) -> Result<EmbeddingEngine, CoreError> {
+pub fn create_embedding_engine(opts: EmbeddingOptions) -> Result<EmbeddingEngine, CoreError> {
     info!(
         model = %opts.model.model_name(),
         "Initializing embedding engine"

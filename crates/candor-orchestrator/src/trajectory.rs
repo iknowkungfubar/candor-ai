@@ -1,10 +1,10 @@
+use std::io::Write;
 /// Trajectory extraction and LoRA fine-tuning pipeline.
 ///
 /// From design doc Phase 6:
 /// 6.2: Daily execution logs → JSONL
 /// 6.3: JSONL → offline LoRA weight generation pipeline
 use std::path::PathBuf;
-use std::io::Write;
 use tracing::info;
 
 use candor_core::error::CoreError;
@@ -45,8 +45,7 @@ pub async fn append_to_jsonl(
             .map_err(|e| CoreError::Io(e.to_string()))?;
     }
 
-    let json = serde_json::to_string(entry)
-        .map_err(|e| CoreError::Serialization(e.to_string()))?;
+    let json = serde_json::to_string(entry).map_err(|e| CoreError::Serialization(e.to_string()))?;
 
     // Append with newline
     let mut file = std::fs::OpenOptions::new()
@@ -104,11 +103,7 @@ pub struct LoRAPipeline {
 }
 
 impl LoRAPipeline {
-    pub fn new(
-        jsonl_path: PathBuf,
-        output_dir: PathBuf,
-        base_model: String,
-    ) -> Self {
+    pub fn new(jsonl_path: PathBuf, output_dir: PathBuf, base_model: String) -> Self {
         Self {
             jsonl_path,
             output_dir,
@@ -124,8 +119,7 @@ impl LoRAPipeline {
             return Ok(false);
         }
         if !self.output_dir.exists() {
-            std::fs::create_dir_all(&self.output_dir)
-                .map_err(|e| CoreError::Io(e.to_string()))?;
+            std::fs::create_dir_all(&self.output_dir).map_err(|e| CoreError::Io(e.to_string()))?;
         }
         Ok(true)
     }
@@ -180,9 +174,8 @@ mod tests {
         let path = dir.path().join("trajectories.jsonl");
 
         for i in 0..5 {
-            let entry = TrajectoryEntry::new(
-                &format!("sess-{i}"), "verify", "cargo test", "passed",
-            );
+            let entry =
+                TrajectoryEntry::new(&format!("sess-{i}"), "verify", "cargo test", "passed");
             append_to_jsonl(&entry, &path).await.unwrap();
         }
 
@@ -218,7 +211,10 @@ mod tests {
         assert!(pipeline.validate().unwrap());
         pipeline.provision().await.unwrap();
 
-        let config_path = dir.path().join("lora_output").join("lora_pipeline_config.json");
+        let config_path = dir
+            .path()
+            .join("lora_output")
+            .join("lora_pipeline_config.json");
         assert!(config_path.exists());
     }
 

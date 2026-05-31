@@ -10,19 +10,17 @@ pub struct GitBranchTool;
 
 #[async_trait::async_trait]
 impl Tool for GitBranchTool {
-    fn name(&self) -> &str { "git_branch" }
+    fn name(&self) -> &str {
+        "git_branch"
+    }
     fn description(&self) -> &str {
         "Create a new git branch. Args: <branch_name>"
     }
 
-    async fn execute(
-        &self,
-        ctx: &ToolContext,
-        args: &[String],
-    ) -> Result<ToolOutput, CoreError> {
-        let branch = args.first().ok_or_else(|| {
-            CoreError::Internal("git_branch requires a branch name".into())
-        })?;
+    async fn execute(&self, ctx: &ToolContext, args: &[String]) -> Result<ToolOutput, CoreError> {
+        let branch = args
+            .first()
+            .ok_or_else(|| CoreError::Internal("git_branch requires a branch name".into()))?;
 
         // Sentinel: block force-push patterns even in branch names
         if branch.contains("--force") || branch.contains("-f") {
@@ -41,16 +39,14 @@ pub struct GitCommitTool;
 
 #[async_trait::async_trait]
 impl Tool for GitCommitTool {
-    fn name(&self) -> &str { "git_commit" }
+    fn name(&self) -> &str {
+        "git_commit"
+    }
     fn description(&self) -> &str {
         "Stage all changes and commit. Args: <message>"
     }
 
-    async fn execute(
-        &self,
-        ctx: &ToolContext,
-        args: &[String],
-    ) -> Result<ToolOutput, CoreError> {
+    async fn execute(&self, ctx: &ToolContext, args: &[String]) -> Result<ToolOutput, CoreError> {
         let message = args.join(" ");
         if message.is_empty() {
             return Err(CoreError::Internal(
@@ -83,23 +79,18 @@ pub struct GitPushTool;
 
 #[async_trait::async_trait]
 impl Tool for GitPushTool {
-    fn name(&self) -> &str { "git_push" }
+    fn name(&self) -> &str {
+        "git_push"
+    }
     fn description(&self) -> &str {
         "Push current branch to remote. Args: [--force] — blocked by sentinel"
     }
 
-    async fn execute(
-        &self,
-        ctx: &ToolContext,
-        args: &[String],
-    ) -> Result<ToolOutput, CoreError> {
+    async fn execute(&self, ctx: &ToolContext, args: &[String]) -> Result<ToolOutput, CoreError> {
         // Sentinel: block force push
-        if args.contains(&"--force".to_string())
-            || args.contains(&"-f".to_string())
-        {
+        if args.contains(&"--force".to_string()) || args.contains(&"-f".to_string()) {
             return Err(CoreError::SentinelPolicyViolation(
-                "Force push is strictly prohibited by sentinel Git-Discipline rule"
-                    .into(),
+                "Force push is strictly prohibited by sentinel Git-Discipline rule".into(),
             ));
         }
 
@@ -115,16 +106,14 @@ pub struct GitStatusTool;
 
 #[async_trait::async_trait]
 impl Tool for GitStatusTool {
-    fn name(&self) -> &str { "git_status" }
+    fn name(&self) -> &str {
+        "git_status"
+    }
     fn description(&self) -> &str {
         "Show git working tree status. No args."
     }
 
-    async fn execute(
-        &self,
-        ctx: &ToolContext,
-        _args: &[String],
-    ) -> Result<ToolOutput, CoreError> {
+    async fn execute(&self, ctx: &ToolContext, _args: &[String]) -> Result<ToolOutput, CoreError> {
         let output = git(&ctx.workdir, &["status", "--short"]).await?;
         if output.trim().is_empty() {
             Ok(ToolOutput::ok("Working tree clean."))
@@ -135,10 +124,7 @@ impl Tool for GitStatusTool {
 }
 
 /// Run a git command in the given directory.
-async fn git(
-    workdir: &str,
-    args: &[&str],
-) -> Result<String, CoreError> {
+async fn git(workdir: &str, args: &[&str]) -> Result<String, CoreError> {
     let output = tokio::process::Command::new("git")
         .args(args)
         .current_dir(workdir)
@@ -146,17 +132,13 @@ async fn git(
         .stderr(Stdio::piped())
         .output()
         .await
-        .map_err(|e| {
-            CoreError::Internal(format!("Failed to run git: {e}"))
-        })?;
+        .map_err(|e| CoreError::Internal(format!("Failed to run git: {e}")))?;
 
     let stdout = String::from_utf8_lossy(&output.stdout).to_string();
     let stderr = String::from_utf8_lossy(&output.stderr).to_string();
 
     if !output.status.success() {
-        Err(CoreError::Internal(format!(
-            "Git command failed: {stderr}"
-        )))
+        Err(CoreError::Internal(format!("Git command failed: {stderr}")))
     } else {
         Ok(if stdout.is_empty() { stderr } else { stdout })
     }

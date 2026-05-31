@@ -5,10 +5,10 @@ use tokio::sync::Mutex;
 
 use candor_core::error::CoreError;
 use candor_core::state::AgentState;
+use candor_graph::checkpoint::CheckpointManager;
 use candor_graph::hooks::{BeforeExecuteConfirmation, LifecycleHooks};
 use candor_graph::node::AgentNode;
 use candor_graph::runner::GraphRunner;
-use candor_graph::checkpoint::CheckpointManager;
 
 /// Node that records its name in the execution log.
 struct PhaseNode {
@@ -17,7 +17,9 @@ struct PhaseNode {
 
 #[async_trait::async_trait]
 impl AgentNode for PhaseNode {
-    fn name(&self) -> &str { &self.name }
+    fn name(&self) -> &str {
+        &self.name
+    }
 
     async fn execute(&self, state: Arc<Mutex<AgentState>>) -> Result<(), CoreError> {
         let mut s = state.lock().await;
@@ -31,11 +33,18 @@ impl AgentNode for PhaseNode {
 #[tokio::test]
 async fn test_strict_7_node_traversal() {
     let mut runner = GraphRunner::new(100);
-    let phases = ["Observe", "Think", "Plan", "Build", "Execute", "Verify", "Learn"];
+    let phases = [
+        "Observe", "Think", "Plan", "Build", "Execute", "Verify", "Learn",
+    ];
     let mut indices = Vec::new();
 
     for phase in &phases {
-        indices.push(runner.insert_node(phase, Box::new(PhaseNode { name: phase.to_string() })));
+        indices.push(runner.insert_node(
+            phase,
+            Box::new(PhaseNode {
+                name: phase.to_string(),
+            }),
+        ));
     }
     for w in indices.windows(2) {
         runner.insert_edge(w[0], w[1], "next".into());
@@ -45,9 +54,19 @@ async fn test_strict_7_node_traversal() {
 
     let state_arc = runner.state();
     let s = state_arc.lock().await;
-    let events: Vec<&str> = s.execution_log.iter().filter(|e| e.contains("Executed:")).map(|e| e.as_str()).collect();
+    let events: Vec<&str> = s
+        .execution_log
+        .iter()
+        .filter(|e| e.contains("Executed:"))
+        .map(|e| e.as_str())
+        .collect();
     assert_eq!(events.len(), 7);
-    assert!(events.iter().enumerate().all(|(i, e)| e.contains(phases[i])));
+    assert!(
+        events
+            .iter()
+            .enumerate()
+            .all(|(i, e)| e.contains(phases[i]))
+    );
 }
 
 /// Test: human-in-the-loop pause blocks Execute phase.
@@ -69,7 +88,9 @@ async fn test_human_in_the_loop_pause() {
     }
 
     let approved = Arc::new(std::sync::atomic::AtomicBool::new(false));
-    let hook = ApproveHook { approved: Arc::clone(&approved) };
+    let hook = ApproveHook {
+        approved: Arc::clone(&approved),
+    };
 
     let hooks = LifecycleHooks {
         before_execute: vec![Box::new(hook)],
@@ -77,10 +98,17 @@ async fn test_human_in_the_loop_pause() {
     };
 
     let mut runner = GraphRunner::new(100).with_hooks(hooks);
-    let phases = ["Observe", "Think", "Plan", "Build", "Execute", "Verify", "Learn"];
+    let phases = [
+        "Observe", "Think", "Plan", "Build", "Execute", "Verify", "Learn",
+    ];
     let mut indices = Vec::new();
     for phase in &phases {
-        indices.push(runner.insert_node(phase, Box::new(PhaseNode { name: phase.to_string() })));
+        indices.push(runner.insert_node(
+            phase,
+            Box::new(PhaseNode {
+                name: phase.to_string(),
+            }),
+        ));
     }
     for w in indices.windows(2) {
         runner.insert_edge(w[0], w[1], "next".into());
@@ -89,7 +117,10 @@ async fn test_human_in_the_loop_pause() {
     // Before approval, Execute should be blocked
     let result = runner.execute_graph(indices[0]).await;
     assert!(result.is_err());
-    assert!(matches!(result.unwrap_err(), CoreError::HumanApprovalDenied));
+    assert!(matches!(
+        result.unwrap_err(),
+        CoreError::HumanApprovalDenied
+    ));
 }
 
 /// Test: checkpoint saves after every node transition.
@@ -130,9 +161,16 @@ fn test_graph_node_count() {
     let rt = tokio::runtime::Runtime::new().unwrap();
     rt.block_on(async {
         let mut runner = GraphRunner::new(100);
-        let phases = ["Observe", "Think", "Plan", "Build", "Execute", "Verify", "Learn"];
+        let phases = [
+            "Observe", "Think", "Plan", "Build", "Execute", "Verify", "Learn",
+        ];
         for phase in &phases {
-            runner.insert_node(phase, Box::new(PhaseNode { name: phase.to_string() }));
+            runner.insert_node(
+                phase,
+                Box::new(PhaseNode {
+                    name: phase.to_string(),
+                }),
+            );
         }
         assert_eq!(runner.node_count(), 7);
     });

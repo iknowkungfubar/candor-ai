@@ -18,16 +18,14 @@ impl ShellTool {
 
 #[async_trait::async_trait]
 impl Tool for ShellTool {
-    fn name(&self) -> &str { "shell" }
+    fn name(&self) -> &str {
+        "shell"
+    }
     fn description(&self) -> &str {
         "Execute a shell command in the sandbox. Args: <command>"
     }
 
-    async fn execute(
-        &self,
-        _ctx: &ToolContext,
-        args: &[String],
-    ) -> Result<ToolOutput, CoreError> {
+    async fn execute(&self, _ctx: &ToolContext, args: &[String]) -> Result<ToolOutput, CoreError> {
         let command = args.join(" ");
         if command.is_empty() {
             return Err(CoreError::Internal(
@@ -42,9 +40,7 @@ impl Tool for ShellTool {
             .await
         {
             Ok(output) => Ok(ToolOutput::ok(output)),
-            Err(e) => Ok(ToolOutput::err(format!(
-                "Command failed: {e}"
-            ))),
+            Err(e) => Ok(ToolOutput::err(format!("Command failed: {e}"))),
         }
     }
 }

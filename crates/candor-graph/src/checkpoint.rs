@@ -25,10 +25,7 @@ impl CheckpointManager {
     }
 
     /// Save the current agent state as a JSON checkpoint file.
-    pub async fn save(
-        &self,
-        state: Arc<Mutex<AgentState>>,
-    ) -> Result<PathBuf, CoreError> {
+    pub async fn save(&self, state: Arc<Mutex<AgentState>>) -> Result<PathBuf, CoreError> {
         let state = state.lock().await;
 
         tokio::fs::create_dir_all(&self.checkpoint_dir)
@@ -54,10 +51,7 @@ impl CheckpointManager {
     }
 
     /// Load the latest checkpoint from disk.
-    pub async fn load_latest(
-        &self,
-        state: Arc<Mutex<AgentState>>,
-    ) -> Result<bool, CoreError> {
+    pub async fn load_latest(&self, state: Arc<Mutex<AgentState>>) -> Result<bool, CoreError> {
         // Collect checkpoint file names, sorted by name (timestamps are in filenames).
         let mut read_dir = tokio::fs::read_dir(&self.checkpoint_dir)
             .await
@@ -71,9 +65,10 @@ impl CheckpointManager {
         {
             let name = entry.file_name();
             if let Some(name_str) = name.to_str()
-                && name_str.ends_with(".json") {
-                    entries.push(entry);
-                }
+                && name_str.ends_with(".json")
+            {
+                entries.push(entry);
+            }
         }
 
         // Sort by filename descending (latest first).
@@ -124,7 +119,9 @@ impl CheckpointManager {
 
         // Sort by modification time ascending.
         entries.sort_by_key(|e| {
-            std::fs::metadata(e.path()).ok().and_then(|m| m.modified().ok())
+            std::fs::metadata(e.path())
+                .ok()
+                .and_then(|m| m.modified().ok())
         });
 
         let to_remove = entries.len().saturating_sub(self.max_checkpoints);

@@ -8,12 +8,14 @@
 // 1. WASM-first: wasmtime with deny-by-default capability sandboxing
 // 2. OS-level: process sandboxing via bubblewrap/Seatbelt/AppContainer
 
-pub mod wasm_exec;
+pub mod cross_platform;
+pub mod policy;
 pub mod process_exec;
 pub mod unified;
-pub mod policy;
-pub mod cross_platform;
+pub mod wasm_exec;
 
-pub use cross_platform::{CircuitBreaker, CircuitState, Backoff, PlatformInfo, SandboxType, with_retry};
+pub use cross_platform::{
+    Backoff, CircuitBreaker, CircuitState, PlatformInfo, SandboxType, with_retry,
+};
 pub use policy::SandboxPolicy;
 pub use unified::ToolSandbox;

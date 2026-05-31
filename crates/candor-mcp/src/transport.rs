@@ -4,14 +4,9 @@
 #[derive(Debug, Clone)]
 pub enum McpTransport {
     /// stdio-based: spawn a process and communicate via stdin/stdout.
-    Stdio {
-        command: String,
-        args: Vec<String>,
-    },
+    Stdio { command: String, args: Vec<String> },
     /// HTTP-based: connect to a running MCP server.
-    Http {
-        url: String,
-    },
+    Http { url: String },
 }
 
 /// A transport that can send JSON-RPC requests and receive responses.
@@ -55,15 +50,18 @@ impl Transport for StdioTransport {
             .stderr(std::process::Stdio::piped())
             .output()
             .await
-            .map_err(|e| candor_core::error::CoreError::Internal(format!("MCP stdio spawn failed: {e}")))?;
+            .map_err(|e| {
+                candor_core::error::CoreError::Internal(format!("MCP stdio spawn failed: {e}"))
+            })?;
 
         // Write request to stdin and read from stdout (simplified: single request-response)
         // In production, this would use a persistent process with async stdin/stdout pipes.
         let raw = String::from_utf8_lossy(&output.stdout).to_string();
         if raw.trim().is_empty() {
-            return Err(candor_core::error::CoreError::Internal(
-                format!("MCP stdio: no response from {}", self.command)
-            ));
+            return Err(candor_core::error::CoreError::Internal(format!(
+                "MCP stdio: no response from {}",
+                self.command
+            )));
         }
 
         // Parse each line as a JSON-RPC response
@@ -73,7 +71,9 @@ impl Transport for StdioTransport {
             }
         }
 
-        Err(candor_core::error::CoreError::Internal("MCP stdio: failed to parse JSON-RPC response".into()))
+        Err(candor_core::error::CoreError::Internal(
+            "MCP stdio: failed to parse JSON-RPC response".into(),
+        ))
     }
 
     async fn ping(&self) -> Result<bool, candor_core::error::CoreError> {
@@ -111,15 +111,19 @@ impl Transport for HttpTransport {
         &self,
         request: serde_json::Value,
     ) -> Result<serde_json::Value, candor_core::error::CoreError> {
-        let resp = self.client
+        let resp = self
+            .client
             .post(&self.url)
             .json(&request)
             .send()
             .await
-            .map_err(|e| candor_core::error::CoreError::Internal(format!("MCP HTTP request failed: {e}")))?;
+            .map_err(|e| {
+                candor_core::error::CoreError::Internal(format!("MCP HTTP request failed: {e}"))
+            })?;
 
-        let val: serde_json::Value = resp.json().await
-            .map_err(|e| candor_core::error::CoreError::Internal(format!("MCP HTTP parse failed: {e}")))?;
+        let val: serde_json::Value = resp.json().await.map_err(|e| {
+            candor_core::error::CoreError::Internal(format!("MCP HTTP parse failed: {e}"))
+        })?;
 
         Ok(val)
     }

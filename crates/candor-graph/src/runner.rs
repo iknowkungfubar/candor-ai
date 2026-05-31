@@ -83,11 +83,7 @@ impl GraphRunner {
     }
 
     /// Build a synthetic AgentAction for hook callbacks from node metadata.
-    fn build_action_for_node(
-        &self,
-        node_label: &str,
-        current_idx: NodeIndex,
-    ) -> AgentAction {
+    fn build_action_for_node(&self, node_label: &str, current_idx: NodeIndex) -> AgentAction {
         let phase = {
             // Extract phase name — scope lock to avoid deadlocks
             let state_arc = self.state();
@@ -113,10 +109,7 @@ impl GraphRunner {
     /// Traverses nodes along the first available outgoing edge from each,
     /// with iteration safety, hook callbacks, and full telemetry.
     #[instrument(skip(self))]
-    pub async fn execute_graph(
-        &mut self,
-        start_node: NodeIndex,
-    ) -> Result<(), CoreError> {
+    pub async fn execute_graph(&mut self, start_node: NodeIndex) -> Result<(), CoreError> {
         let mut current_node = start_node;
 
         loop {
@@ -140,10 +133,7 @@ impl GraphRunner {
             // ── Fire before_tool hooks ──
             let action = self.build_action_for_node(&node_label, current_node);
             for hook in &self.hooks.before_tool {
-                if let Err(e) = hook
-                    .before_tool(&action, Arc::clone(&self.state))
-                    .await
-                {
+                if let Err(e) = hook.before_tool(&action, Arc::clone(&self.state)).await {
                     error!(node = %node_label, error = %e, "BeforeToolCallback rejected action");
                     for err_hook in &self.hooks.on_error {
                         err_hook
@@ -157,10 +147,7 @@ impl GraphRunner {
             // ── Human-in-the-loop: require approval before Execute phase ──
             if node_label == "Execute" {
                 for hook in &self.hooks.before_execute {
-                    if let Err(e) = hook
-                        .before_execute(Arc::clone(&self.state))
-                        .await
-                    {
+                    if let Err(e) = hook.before_execute(Arc::clone(&self.state)).await {
                         error!(node = %node_label, error = %e, "Human approval required for Execute phase");
                         return Err(e);
                     }
@@ -196,18 +183,15 @@ impl GraphRunner {
                 let s = state_arc.lock().await;
                 if s.iteration_count % 5 == 0 {
                     for hook in &self.hooks.checkpoint {
-                        let _ = hook
-                            .on_checkpoint(Arc::clone(&self.state))
-                            .await;
+                        let _ = hook.on_checkpoint(Arc::clone(&self.state)).await;
                     }
                 }
             }
 
             // ── Traverse to the next node ──
-            let mut neighbors = self.graph.neighbors_directed(
-                current_node,
-                petgraph::Direction::Outgoing,
-            );
+            let mut neighbors = self
+                .graph
+                .neighbors_directed(current_node, petgraph::Direction::Outgoing);
 
             match neighbors.next() {
                 Some(next_node) => {
@@ -225,11 +209,7 @@ impl GraphRunner {
                     // ── Fire before_transition hooks ──
                     for hook in &self.hooks.before_transition {
                         if let Err(e) = hook
-                            .before_transition(
-                                &node_label,
-                                &next_label,
-                                Arc::clone(&self.state),
-                            )
+                            .before_transition(&node_label, &next_label, Arc::clone(&self.state))
                             .await
                         {
                             error!(from = %node_label, to = %next_label, error = %e, "BeforeNodeTransition rejected");
@@ -247,11 +227,7 @@ impl GraphRunner {
                     // ── Fire after_transition hooks ──
                     for hook in &self.hooks.after_transition {
                         let _ = hook
-                            .after_transition(
-                                &node_label,
-                                &next_label,
-                                Arc::clone(&self.state),
-                            )
+                            .after_transition(&node_label, &next_label, Arc::clone(&self.state))
                             .await;
                     }
 
@@ -266,9 +242,7 @@ impl GraphRunner {
 
         // ── Fire on_complete hooks ──
         for hook in &self.hooks.on_complete {
-            let _ = hook
-                .on_complete(Arc::clone(&self.state))
-                .await;
+            let _ = hook.on_complete(Arc::clone(&self.state)).await;
         }
 
         Ok(())
@@ -288,8 +262,8 @@ impl GraphRunner {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::atomic::{AtomicU32, Ordering};
     use std::sync::Arc as StdArc;
+    use std::sync::atomic::{AtomicU32, Ordering};
 
     struct CountingNode {
         name: &'static str,
@@ -302,10 +276,7 @@ mod tests {
             self.name
         }
 
-        async fn execute(
-            &self,
-            state: Arc<Mutex<AgentState>>,
-        ) -> Result<(), CoreError> {
+        async fn execute(&self, state: Arc<Mutex<AgentState>>) -> Result<(), CoreError> {
             self.counter.fetch_add(1, Ordering::SeqCst);
             let mut s = state.lock().await;
             s.log_event(&format!("{} executed", self.name));

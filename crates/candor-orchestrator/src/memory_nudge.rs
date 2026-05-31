@@ -38,7 +38,10 @@ pub async fn run_nudge(memory: &MemorySystem) -> Result<usize, CoreError> {
         return Ok(0);
     }
 
-    info!(log_count = logs.len(), "Memory nudge: fetched execution logs");
+    info!(
+        log_count = logs.len(),
+        "Memory nudge: fetched execution logs"
+    );
 
     // Step 2: Group by session_id
     let mut grouped: HashMap<String, Vec<ExecutionLogEntry>> = HashMap::new();
@@ -205,7 +208,10 @@ mod tests {
         let verify_pos = summary.find("[Phase: verify]").unwrap();
 
         assert!(build_pos < observe_pos, "build should come before observe");
-        assert!(observe_pos < verify_pos, "observe should come before verify");
+        assert!(
+            observe_pos < verify_pos,
+            "observe should come before verify"
+        );
         assert!(summary.contains("3 actions across 3 phases"));
     }
 
@@ -226,7 +232,10 @@ mod tests {
         let emb_a = derive_embedding("session alpha completed", 64);
         let emb_b = derive_embedding("session beta completed", 64);
 
-        assert_ne!(emb_a, emb_b, "different inputs should produce different embeddings");
+        assert_ne!(
+            emb_a, emb_b,
+            "different inputs should produce different embeddings"
+        );
     }
 
     #[test]
@@ -265,11 +274,17 @@ mod tests {
             .unwrap();
 
         let count = run_nudge(&memory).await.unwrap();
-        assert_eq!(count, 2, "should generate 2 summaries (sess-alpha, sess-beta)");
+        assert_eq!(
+            count, 2,
+            "should generate 2 summaries (sess-alpha, sess-beta)"
+        );
 
         // Verify logs were purged
         let remaining = memory.get_all_execution_logs().await.unwrap();
-        assert!(remaining.is_empty(), "execution logs should be purged after nudge");
+        assert!(
+            remaining.is_empty(),
+            "execution logs should be purged after nudge"
+        );
 
         // Verify memory blocks were stored — we can't directly query memory_block
         // without a retrieval method, but run_nudge returned Ok(2) so storage succeeded.
@@ -298,17 +313,38 @@ mod tests {
         let memory = MemorySystem::new(128).await.unwrap();
 
         // Session 1: 4 entries across 3 phases
-        memory.store_execution_log("multi-1", "observe", "scan", "found 10").await.unwrap();
-        memory.store_execution_log("multi-1", "think", "plan", "decided refactor").await.unwrap();
-        memory.store_execution_log("multi-1", "build", "cargo fix", "applied 3 changes").await.unwrap();
-        memory.store_execution_log("multi-1", "verify", "cargo test", "42 passed").await.unwrap();
+        memory
+            .store_execution_log("multi-1", "observe", "scan", "found 10")
+            .await
+            .unwrap();
+        memory
+            .store_execution_log("multi-1", "think", "plan", "decided refactor")
+            .await
+            .unwrap();
+        memory
+            .store_execution_log("multi-1", "build", "cargo fix", "applied 3 changes")
+            .await
+            .unwrap();
+        memory
+            .store_execution_log("multi-1", "verify", "cargo test", "42 passed")
+            .await
+            .unwrap();
 
         // Session 2: 2 entries
-        memory.store_execution_log("multi-2", "observe", "read config", "parsed").await.unwrap();
-        memory.store_execution_log("multi-2", "build", "apply config", "done").await.unwrap();
+        memory
+            .store_execution_log("multi-2", "observe", "read config", "parsed")
+            .await
+            .unwrap();
+        memory
+            .store_execution_log("multi-2", "build", "apply config", "done")
+            .await
+            .unwrap();
 
         // Session 3: 1 entry
-        memory.store_execution_log("multi-3", "think", "research", "found docs").await.unwrap();
+        memory
+            .store_execution_log("multi-3", "think", "research", "found docs")
+            .await
+            .unwrap();
 
         let count = run_nudge(&memory).await.unwrap();
         assert_eq!(count, 3, "should generate 3 summaries for 3 sessions");

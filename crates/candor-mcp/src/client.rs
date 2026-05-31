@@ -29,10 +29,7 @@ pub struct McpTool {
 
 impl McpClient {
     /// Connect to an MCP server and initialize the session.
-    pub async fn connect(
-        name: String,
-        transport: Box<dyn Transport>,
-    ) -> Result<Self, CoreError> {
+    pub async fn connect(name: String, transport: Box<dyn Transport>) -> Result<Self, CoreError> {
         info!(server = %name, "Connecting to MCP server");
 
         // Initialize
@@ -119,7 +116,8 @@ impl McpClient {
         let content = resp["result"]["content"]
             .as_array()
             .map(|items| {
-                items.iter()
+                items
+                    .iter()
                     .filter_map(|item| item["text"].as_str())
                     .collect::<Vec<_>>()
                     .join("\n")

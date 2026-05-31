@@ -44,18 +44,14 @@ static NARRATION_REGEX: LazyLock<Regex> = LazyLock::new(|| {
 static FORCE_PUSH_REGEX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"git\s+push\s+(-f|--force)").unwrap());
 
-static RM_RF_REGEX: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"rm\s+-rf\s+/").unwrap());
+static RM_RF_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"rm\s+-rf\s+/").unwrap());
 
 static DEAD_CODE_REGEX: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r#"(?i)(if\s+false|while\s+false|unreachable!\(\s*"never"\s*\))"#).unwrap()
 });
 
 /// Run all deterministic rules against a payload.
-pub fn enforce_deterministic_rules(
-    payload: &str,
-    valid_scopes: &[String],
-) -> RulesCheck {
+pub fn enforce_deterministic_rules(payload: &str, valid_scopes: &[String]) -> RulesCheck {
     let mut violations = Vec::new();
 
     // ── Rule 1: Scope-Lock ──
@@ -64,7 +60,9 @@ pub fn enforce_deterministic_rules(
         if !in_scope {
             violations.push(RuleViolation {
                 rule: "scope-lock".into(),
-                description: "Payload does not match any valid scope — out-of-scope invocation blocked.".into(),
+                description:
+                    "Payload does not match any valid scope — out-of-scope invocation blocked."
+                        .into(),
                 severity: ViolationSeverity::Fatal,
             });
         }
@@ -92,7 +90,8 @@ pub fn enforce_deterministic_rules(
     if TODO_REGEX.is_match(payload) {
         violations.push(RuleViolation {
             rule: "no-slop: vague-todo".into(),
-            description: "Vague TODO detected — replace with specific issue reference or remove.".into(),
+            description: "Vague TODO detected — replace with specific issue reference or remove."
+                .into(),
             severity: ViolationSeverity::Fatal,
         });
     }
@@ -115,7 +114,9 @@ pub fn enforce_deterministic_rules(
         });
     }
 
-    let passed = violations.iter().all(|v| v.severity != ViolationSeverity::Fatal);
+    let passed = violations
+        .iter()
+        .all(|v| v.severity != ViolationSeverity::Fatal);
 
     RulesCheck { passed, violations }
 }
@@ -130,9 +131,10 @@ pub async fn verify_file_exists(path: &str) -> Result<bool, CoreError> {
 
 /// Check that a proposed commit message follows conventional commits.
 pub fn check_conventional_commit(message: &str) -> RulesCheck {
-    let conventional_regex =
-        Regex::new(r"^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\(.+\))?!?: .+")
-            .unwrap();
+    let conventional_regex = Regex::new(
+        r"^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\(.+\))?!?: .+",
+    )
+    .unwrap();
 
     if conventional_regex.is_match(message.trim()) {
         RulesCheck {
@@ -167,20 +169,20 @@ mod tests {
 
     #[test]
     fn test_force_push_blocked() {
-        let check = enforce_deterministic_rules(
-            "git push --force origin main",
-            &["git push".into()],
-        );
+        let check =
+            enforce_deterministic_rules("git push --force origin main", &["git push".into()]);
         assert!(!check.passed);
-        assert!(check.violations.iter().any(|v| v.rule.contains("force-push")));
+        assert!(
+            check
+                .violations
+                .iter()
+                .any(|v| v.rule.contains("force-push"))
+        );
     }
 
     #[test]
     fn test_todo_detected() {
-        let check = enforce_deterministic_rules(
-            "// TODO: fix this later",
-            &["code".into()],
-        );
+        let check = enforce_deterministic_rules("// TODO: fix this later", &["code".into()]);
         assert!(!check.passed);
     }
 

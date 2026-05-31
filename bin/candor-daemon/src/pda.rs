@@ -161,15 +161,17 @@ async fn init_git_repo(home: &PathBuf) -> Result<(), PdaError> {
     }
 
     // Set user config for the repo if not already set globally.
-    let global_user = tokio::process::Command::new("git")
-        .args(["config", "user.name"])
+    let has_global_user = tokio::process::Command::new("git")
+        .args(["config", "--global", "user.name"])
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .status()
-        .await;
+        .await
+        .map(|s| s.success())
+        .unwrap_or(false);
 
-    if global_user.is_err() {
-        // Set local git config for this repo.
+    if !has_global_user {
+        // Set local git config for this repo so commits work.
         tokio::process::Command::new("git")
             .args(["config", "user.name", "Candor PDA"])
             .current_dir(home)
@@ -398,4 +400,205 @@ pub async fn status() -> Result<String, PdaError> {
     }
 
     Ok(report)
+}
+
+// ── Tests ──
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+    use tokio::sync::Mutex;
+
+    /// Serializes PDA tests — HOME env var is process-global.
+    static TEST_LOCK: Mutex<()> = Mutex::const_new(());
+
+    async fn with_pda<F, Fut, T>(f: F) -> T
+    where
+        F: FnOnce(PathBuf) -> Fut,
+        Fut: std::future::Future<Output = T>,
+    {
+        let _guard = TEST_LOCK.lock().await;
+
+        let tmp = std::env::temp_dir().join(format!("candor-pda-test-{}", uuid::Uuid::new_v4()));
+        tokio::fs::create_dir_all(&tmp).await.unwrap();
+
+        let orig_home = std::env::var("HOME").ok();
+        // SAFETY: Mutex ensures single-threaded env access.
+        unsafe { std::env::set_var("HOME", &tmp); }
+
+        let result = f(tmp.clone()).await;
+
+        match orig_home {
+            Some(h) => unsafe { std::env::set_var("HOME", h); },
+            None => unsafe { std::env::remove_var("HOME"); },
+        }
+        drop(_guard);
+        let _ = tokio::fs::remove_dir_all(&tmp).await;
+
+        result
+    }
+
+    #[tokio::test]
+    async fn test_init_creates_directories() {
+        with_pda(|tmp| async move {
+            let pda = tmp.join(".candor");
+            assert!(!pda.exists(), "home should not exist before init");
+            init().await.unwrap();
+            assert!(pda.exists());
+            assert!(pda.join("IDENTITY.md").exists());
+            assert!(pda.join("DA_IDENTITY.md").exists());
+            assert!(pda.join("MEMORY").join("WORK").exists());
+            assert!(pda.join("MEMORY").join("LEARNING").exists());
+            assert!(pda.join("MEMORY").join("KNOWLEDGE").exists());
+            assert!(pda.join(".git").exists());
+        }).await;
+    }
+
+    #[tokio::test]
+    async fn test_init_idempotent() {
+        with_pda(|_| async move {
+            init().await.unwrap();
+            init().await.unwrap();
+        }).await;
+    }
+
+    #[tokio::test]
+    async fn test_read_identity_defaults() {
+        with_pda(|_| async move {
+            init().await.unwrap();
+            let id = read_identity().await.unwrap();
+            assert!(id.contains("## Name"));
+            assert!(id.contains("## Goals"));
+        }).await;
+    }
+
+    #[tokio::test]
+    async fn test_read_da_identity_defaults() {
+        with_pda(|_| async move {
+            init().await.unwrap();
+            let da = read_da_identity().await.unwrap();
+            assert!(da.contains("## Name"));
+            assert!(da.contains("Candor"));
+        }).await;
+    }
+
+    #[tokio::test]
+    async fn test_identity_not_found() {
+        with_pda(|_| async move {
+            let err = read_identity().await.unwrap_err().to_string();
+            assert!(err.contains("IDENTITY.md"));
+        }).await;
+    }
+
+    #[tokio::test]
+    async fn test_da_identity_not_found() {
+        with_pda(|_| async move {
+            let err = read_da_identity().await.unwrap_err().to_string();
+            assert!(err.contains("DA_IDENTITY.md"));
+        }).await;
+    }
+
+    #[tokio::test]
+    async fn test_start_work_creates_isa() {
+        with_pda(|tmp| async move {
+            init().await.unwrap();
+            start_work("test-session", "Run a test").await.unwrap();
+            let isa = tmp.join(".candor").join("MEMORY").join("WORK").join("test-session").join("ISA.md");
+            assert!(isa.exists());
+            let content = tokio::fs::read_to_string(isa).await.unwrap();
+            assert!(content.contains("test-session"));
+            assert!(content.contains("Run a test"));
+        }).await;
+    }
+
+    #[tokio::test]
+    async fn test_start_work_duplicate_slug() {
+        with_pda(|_| async move {
+            init().await.unwrap();
+            start_work("dup", "first").await.unwrap();
+            let err = start_work("dup", "second").await.unwrap_err().to_string();
+            assert!(err.contains("already exists"));
+        }).await;
+    }
+
+    #[tokio::test]
+    async fn test_list_work() {
+        with_pda(|_| async move {
+            init().await.unwrap();
+            assert!(list_work().await.unwrap().is_empty());
+            start_work("alpha", "first").await.unwrap();
+            start_work("beta", "second").await.unwrap();
+            let slugs = list_work().await.unwrap();
+            assert_eq!(slugs.len(), 2);
+            assert!(slugs.contains(&"alpha".to_string()));
+            assert!(slugs.contains(&"beta".to_string()));
+        }).await;
+    }
+
+    #[tokio::test]
+    async fn test_status_after_init() {
+        with_pda(|_| async move {
+            init().await.unwrap();
+            let s = status().await.unwrap();
+            assert!(s.contains("PDA Home"));
+            assert!(s.contains("IDENTITY.md: ✅"));
+            assert!(s.contains("DA_IDENTITY.md: ✅"));
+            assert!(s.contains("Work sessions: 0"));
+        }).await;
+    }
+
+    #[tokio::test]
+    async fn test_status_with_work() {
+        with_pda(|_| async move {
+            init().await.unwrap();
+            start_work("active", "do it").await.unwrap();
+            assert!(status().await.unwrap().contains("Work sessions: 1"));
+        }).await;
+    }
+
+    #[tokio::test]
+    async fn test_write_learning() {
+        with_pda(|tmp| async move {
+            init().await.unwrap();
+            write_learning("test-pat", "Learned something").await.unwrap();
+            let f = tmp.join(".candor").join("MEMORY").join("LEARNING").join("test-pat.md");
+            assert!(f.exists());
+            assert!(tokio::fs::read_to_string(f).await.unwrap().contains("Learned something"));
+        }).await;
+    }
+
+    #[tokio::test]
+    async fn test_write_knowledge() {
+        with_pda(|tmp| async move {
+            init().await.unwrap();
+            write_knowledge("entity", "Idea", "great idea").await.unwrap();
+            let f = tmp.join(".candor").join("MEMORY").join("KNOWLEDGE").join("entity.md");
+            assert!(f.exists());
+            let c = tokio::fs::read_to_string(f).await.unwrap();
+            assert!(c.contains("type: Idea"));
+            assert!(c.contains("great idea"));
+        }).await;
+    }
+
+    #[tokio::test]
+    async fn test_git_auto_commit() {
+        with_pda(|tmp| async move {
+            init().await.unwrap();
+            write_learning("git-test", "auto-commit").await.unwrap();
+            let out = std::process::Command::new("git")
+                .args(["log", "--oneline"])
+                .current_dir(&tmp.join(".candor"))
+                .output().unwrap();
+            let log = String::from_utf8_lossy(&out.stdout);
+            assert!(!log.is_empty(), "git log should have entries");
+            assert!(log.contains("learn:"), "git log should contain learn commit: {log}");
+        }).await;
+    }
+
+    #[test]
+    fn test_pda_home_ends_with_candor() {
+        let h = pda_home();
+        assert!(h.to_string_lossy().ends_with(".candor"), "got: {}", h.display());
+    }
 }

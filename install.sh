@@ -32,19 +32,19 @@ esac
 # Check for existing binary
 if command -v "$BIN_NAME" &>/dev/null; then
     echo "  Candor AI already installed at $(which $BIN_NAME)"
-    echo "  To upgrade, uninstall first or use: cargo install candor-ai"
+    echo "  To upgrade, uninstall first or use: cargo install candor-daemon"
     exit 0
 fi
 
 # Check for Rust toolchain as fallback
 if command -v cargo &>/dev/null; then
     echo "  Rust toolchain detected — installing via cargo..."
-    cargo install candor-ai 2>/dev/null && {
+    cargo install candor-daemon 2>/dev/null && {
         echo "  ✅ Candor AI installed via cargo"
         echo "  Run 'candor doctor' to verify"
         exit 0
     }
-    echo "  Cargo install failed — trying pre-built binary..."
+    echo "  Cargo install failed — try: cargo install candor-daemon"
 fi
 
 # Pre-built binary from GitHub Releases
@@ -68,7 +68,7 @@ else
     echo ""
     echo "  Install Rust and run:"
     echo "    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh"
-    echo "    cargo install candor-ai"
+    echo "    cargo install candor-daemon"
     echo ""
     echo "  Or build from source:"
     echo "    git clone https://github.com/iknowkungfubar/candor-ai"

@@ -9,6 +9,7 @@
 // success criteria programmatically. The system hill-climbs toward this
 // state, replacing raw tool execution logs with tangible deliverables."
 
+pub mod approval_gate;
 pub mod engine;
 pub mod isa_parser;
 pub mod markdown_router;

@@ -105,4 +105,9 @@ impl LifecycleHooks {
         self.after_tool.push(hook);
         self
     }
+
+    pub fn with_before_execute(mut self, hook: Box<dyn BeforeExecuteConfirmation>) -> Self {
+        self.before_execute.push(hook);
+        self
+    }
 }

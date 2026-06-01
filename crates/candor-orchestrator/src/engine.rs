@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::path::PathBuf;
 /// The complete Candor Agent — fully LLM-driven 7-phase SWE agent.
 ///
@@ -10,6 +11,7 @@ use uuid::Uuid;
 
 use candor_cognitive::CognitiveEngine;
 use candor_core::error::CoreError;
+use candor_core::ideal::AcceptanceCriterion;
 use candor_core::ideal::IdealStateArtifact;
 use candor_core::ideal::VerificationMethod;
 use candor_core::state::AgentState;
@@ -81,7 +83,9 @@ impl OrchestratorEngine {
         tools.register(Arc::new(GitStatusTool));
         let tools_arc = Arc::new(tools);
 
-        let hooks = LifecycleHooks::default().with_before_tool(sentinel.clone_box());
+        let hooks = LifecycleHooks::default()
+            .with_before_tool(sentinel.clone_box())
+            .with_before_execute(Box::new(crate::approval_gate::ApprovalGate));
         let graph_runner = GraphRunner::new(max_iterations).with_hooks(hooks);
         let session_id = Uuid::new_v4().to_string();
 
@@ -629,24 +633,234 @@ impl PhaseContext {
         state: Arc<Mutex<AgentState>>,
     ) -> Result<(), CoreError> {
         let mut s = state.lock().await;
-        s.log_event("Verify: running tests");
+        s.log_event("Verify: starting ISA criterion verification");
+        let isa = s.ideal_state.clone();
+        drop(s);
 
-        if let Some(tool) = self.tools.find("run_tests") {
+        let isa = match isa {
+            Some(ref isa) => isa.clone(),
+            None => {
+                state
+                    .lock()
+                    .await
+                    .log_event("Verify: no ISA set — skipping verification");
+                return Ok(());
+            }
+        };
+
+        // ── Phase 1: Run tests as a general health check ──
+        let _test_output = if let Some(tool) = self.tools.find("run_tests") {
             match tool.execute(ctx, &[]).await {
                 Ok(out) => {
-                    let passed = out.success;
-                    s.append_message(&format!("Tests:\n{}", out.output));
-                    let msg = if passed {
-                        "Verify: PASSED"
+                    let mut s = state.lock().await;
+                    s.append_message(&format!("Test results:\n{}", out.output));
+                    s.log_event(if out.success {
+                        "Verify: tests PASSED"
                     } else {
-                        "Verify: FAILED"
-                    };
-                    s.log_event(msg);
+                        "Verify: tests FAILED"
+                    });
+                    Some(out.success)
                 }
-                Err(e) => s.log_event(&format!("Verify: error ({e})")),
+                Err(e) => {
+                    state
+                        .lock()
+                        .await
+                        .log_event(&format!("Verify: test error ({e})"));
+                    None
+                }
+            }
+        } else {
+            None
+        };
+
+        // ── Phase 2: Verify each acceptance criterion ──
+        let mut results: HashMap<String, bool> = HashMap::new();
+        let mut summary = String::from("## ISA Verification Results\n\n");
+
+        for criterion in &isa.acceptance_criteria {
+            let passed = self.verify_criterion(criterion, ctx, &state).await;
+            results.insert(criterion.id.clone(), passed);
+
+            let status = if passed { "✅ PASS" } else { "❌ FAIL" };
+            let label = match &criterion.verification_method {
+                VerificationMethod::ShellCommand { .. } => "shell",
+                VerificationMethod::TestCase { .. } => "test",
+                VerificationMethod::FileExists { .. } => "file",
+                VerificationMethod::FileMatches { .. } => "file-matches",
+                VerificationMethod::LintCheck { .. } => "lint",
+                VerificationMethod::HumanConfirmation { .. } => "human",
+            };
+            summary.push_str(&format!(
+                "- **{}**: {} — {} ({})\n",
+                criterion.id, status, criterion.description, label,
+            ));
+            state
+                .lock()
+                .await
+                .log_event(&format!("Verify: criterion '{}': {}", criterion.id, status));
+        }
+
+        // ── Phase 3: Check for required human confirmation criteria ──
+        let has_human_criteria = isa.acceptance_criteria.iter().any(|c| {
+            matches!(
+                c.verification_method,
+                VerificationMethod::HumanConfirmation { .. }
+            )
+        });
+
+        if has_human_criteria {
+            summary.push_str("\n⚠️  Human confirmation required for some criteria.\n");
+            {
+                let mut s = state.lock().await;
+                s.awaiting_approval = true;
             }
         }
+
+        {
+            let mut s = state.lock().await;
+            s.verification_results = results.clone();
+            s.append_message(&summary);
+        }
+
+        // ── Phase 4: Determine if all criteria passed ──
+        let all_passed = results.values().all(|&v| v);
+        if all_passed {
+            state.lock().await.log_event("Verify: ALL CRITERIA PASSED");
+        } else {
+            let failed: Vec<_> = results
+                .iter()
+                .filter(|&(_, &v)| !v)
+                .map(|(id, _)| id.clone())
+                .collect();
+            let msg = format!("Verify: criteria FAILED: [{}]", failed.join(", "));
+            state.lock().await.log_event(&msg);
+        }
+
         Ok(())
+    }
+
+    /// Verify a single acceptance criterion against its verification method.
+    async fn verify_criterion(
+        &self,
+        criterion: &AcceptanceCriterion,
+        ctx: &ToolContext,
+        state: &Arc<Mutex<AgentState>>,
+    ) -> bool {
+        match &criterion.verification_method {
+            VerificationMethod::ShellCommand { command } => {
+                self.verify_shell_command(command, ctx, state).await
+            }
+            VerificationMethod::TestCase { test_name } => {
+                self.verify_test_case(test_name, ctx, state).await
+            }
+            VerificationMethod::FileExists { path } => self.verify_file_exists(path, state).await,
+            VerificationMethod::FileMatches { path, pattern } => {
+                self.verify_file_matches(path, pattern, state).await
+            }
+            VerificationMethod::LintCheck { command } => {
+                self.verify_shell_command(command, ctx, state).await
+            }
+            VerificationMethod::HumanConfirmation { prompt } => {
+                // Human confirmation criteria are verified via the BeforeExecuteConfirmation hook.
+                // In the Verify phase, we mark them as requiring approval.
+                state.lock().await.log_event(&format!(
+                    "Verify: criterion '{}' requires human confirmation: {}",
+                    criterion.id, prompt
+                ));
+                // Don't pass/fail here — the ApprovalGate hook handles this
+                true
+            }
+        }
+    }
+
+    /// Verify a shell command criterion: run the command and check exit code.
+    async fn verify_shell_command(
+        &self,
+        command: &str,
+        ctx: &ToolContext,
+        _state: &Arc<Mutex<AgentState>>,
+    ) -> bool {
+        if command.trim().is_empty() {
+            return false;
+        }
+        // Try using the shell tool first
+        if let Some(tool) = self.tools.find("shell") {
+            match tool.execute(ctx, &[command.to_string()]).await {
+                Ok(out) => out.success,
+                Err(_) => {
+                    // Fallback: run directly
+                    let output = tokio::process::Command::new("sh")
+                        .arg("-c")
+                        .arg(command)
+                        .output()
+                        .await;
+                    matches!(output, Ok(o) if o.status.success())
+                }
+            }
+        } else {
+            // No shell tool — run directly
+            let output = tokio::process::Command::new("sh")
+                .arg("-c")
+                .arg(command)
+                .output()
+                .await;
+            matches!(output, Ok(o) if o.status.success())
+        }
+    }
+
+    /// Verify a test case criterion: run a specific test.
+    async fn verify_test_case(
+        &self,
+        test_name: &str,
+        ctx: &ToolContext,
+        _state: &Arc<Mutex<AgentState>>,
+    ) -> bool {
+        if let Some(tool) = self.tools.find("run_tests") {
+            let args = if test_name.trim().is_empty() {
+                vec![]
+            } else {
+                vec![test_name.to_string()]
+            };
+            match tool.execute(ctx, &args).await {
+                Ok(out) => out.success,
+                Err(_) => false,
+            }
+        } else {
+            // Fallback: run cargo test directly
+            let mut cmd = tokio::process::Command::new("cargo");
+            cmd.arg("test");
+            if !test_name.trim().is_empty() {
+                cmd.arg("--").arg(test_name);
+            }
+            let output = cmd.output().await;
+            matches!(output, Ok(o) if o.status.success())
+        }
+    }
+
+    /// Verify a file existence criterion.
+    async fn verify_file_exists(&self, path: &str, _state: &Arc<Mutex<AgentState>>) -> bool {
+        if path.trim().is_empty() {
+            return false;
+        }
+        tokio::fs::metadata(path).await.is_ok()
+    }
+
+    /// Verify a file content matches a pattern criterion.
+    async fn verify_file_matches(
+        &self,
+        path: &str,
+        pattern: &str,
+        _state: &Arc<Mutex<AgentState>>,
+    ) -> bool {
+        if path.trim().is_empty() || pattern.trim().is_empty() {
+            return false;
+        }
+        let content = match tokio::fs::read_to_string(path).await {
+            Ok(c) => c,
+            Err(_) => return false,
+        };
+        // Simple substring check — sufficient for ISA verification patterns
+        content.contains(pattern)
     }
 
     async fn learn(

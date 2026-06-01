@@ -46,6 +46,10 @@ pub struct AgentState {
     /// The Ideal State Artifact (ISA) defining success criteria.
     /// Set at task start so all phases can reference it.
     pub ideal_state: Option<IdealStateArtifact>,
+
+    /// Results of ISA acceptance criterion verification (criterion_id → passed).
+    /// Populated by the Verify phase.
+    pub verification_results: HashMap<String, bool>,
 }
 
 impl AgentState {

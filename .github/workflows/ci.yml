@@ -95,7 +95,7 @@ jobs:
         run: cargo install cargo-audit --locked 2>/dev/null || true
 
       - name: Run security audit
-        run: cargo audit 2>&1 || echo "Security audit completed with warnings"
+        run: cargo audit 2>&1
 
   build:
     name: Release Build

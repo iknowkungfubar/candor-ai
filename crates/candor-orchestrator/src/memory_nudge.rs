@@ -104,7 +104,8 @@ fn build_session_summary(session_id: &str, logs: &[ExecutionLogEntry]) -> String
     phases.sort();
 
     for phase in phases {
-        let entries = by_phase.get(phase).expect("phase key just inserted");
+        // SAFETY: phase key comes from by_phase.keys() just above, so it must exist.
+        let entries = &by_phase[phase];
         lines.push(format!("[Phase: {}] {} action(s)", phase, entries.len()));
         for entry in entries {
             lines.push(format!("  action: {} -> {}", entry.action, entry.result));

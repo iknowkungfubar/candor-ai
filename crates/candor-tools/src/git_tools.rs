@@ -1,10 +1,18 @@
 /// Git tools: branch, commit, push — all gated through the sentinel.
+use std::sync::LazyLock;
 use std::process::Stdio;
 use tracing::info;
 
 use candor_core::error::CoreError;
 
 use super::registry::{Tool, ToolContext, ToolOutput};
+
+static CONVENTIONAL_COMMIT_REGEX: LazyLock<regex::Regex> = LazyLock::new(|| {
+    regex::Regex::new(
+        r"^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\(.+\))?!?: .+",
+    )
+    .expect("Invalid conventional-commit regex")
+});
 
 pub struct GitBranchTool;
 
@@ -55,12 +63,7 @@ impl Tool for GitCommitTool {
         }
 
         // Sentinel: validate conventional commit format
-        let conventional = regex::Regex::new(
-            r"^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\(.+\))?!?: .+",
-        )
-        .unwrap();
-
-        if !conventional.is_match(&message) {
+        if !CONVENTIONAL_COMMIT_REGEX.is_match(&message) {
             return Err(CoreError::SentinelPolicyViolation(
                 "Commit message must follow conventional commits format".into(),
             ));

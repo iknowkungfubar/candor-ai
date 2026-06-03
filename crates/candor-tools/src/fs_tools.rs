@@ -6,9 +6,10 @@ use candor_core::error::CoreError;
 
 use super::registry::{Tool, ToolContext, ToolOutput};
 
-/// Validate that a resolved path is within the allowed workdir.
+/// Validate that a resolved file path is within the allowed workdir.
 /// Uses canonicalize to prevent path traversal via `..` or symlinks.
-async fn validate_path(resolved: &Path, workdir: &Path) -> Result<(), CoreError> {
+/// NOTE: This function requires the path to exist on disk (for canonicalize).
+async fn validate_file_path(resolved: &Path, workdir: &Path) -> Result<(), CoreError> {
     // Canonicalize both paths to resolve symlinks and `..` components
     let canonical_resolved = tokio::fs::canonicalize(resolved)
         .await
@@ -22,6 +23,32 @@ async fn validate_path(resolved: &Path, workdir: &Path) -> Result<(), CoreError>
         return Err(CoreError::Io(format!(
             "Path traversal denied: {} escapes the working directory {}",
             resolved.display(),
+            canonical_workdir.display()
+        )));
+    }
+    Ok(())
+}
+
+/// Validate that a parent directory (for a file-to-be-created) is within workdir.
+/// Canonicalizes the parent dir (which must exist) to prevent path traversal.
+async fn validate_parent_path(parent: &Path, workdir: &Path) -> Result<(), CoreError> {
+    let canonical_parent = tokio::fs::canonicalize(parent)
+        .await
+        .map_err(|e| {
+            CoreError::Io(format!(
+                "Parent directory validation failed for {}: {e}",
+                parent.display()
+            ))
+        })?;
+
+    let canonical_workdir = tokio::fs::canonicalize(workdir)
+        .await
+        .map_err(|e| CoreError::Io(format!("Workdir canonicalization failed: {e}")))?;
+
+    if !canonical_parent.starts_with(&canonical_workdir) {
+        return Err(CoreError::Io(format!(
+            "Path traversal denied: {} escapes the working directory {}",
+            parent.display(),
             canonical_workdir.display()
         )));
     }
@@ -48,7 +75,7 @@ impl Tool for ReadFileTool {
         let full_path = PathBuf::from(&ctx.workdir).join(path);
 
         // Validate path is within workdir (prevents path traversal)
-        validate_path(&full_path, Path::new(&ctx.workdir)).await?;
+        validate_file_path(&full_path, Path::new(&ctx.workdir)).await?;
 
         info!(path = %full_path.display(), "Reading file");
 
@@ -86,10 +113,10 @@ impl Tool for WriteFileTool {
 
         let full_path = PathBuf::from(&ctx.workdir).join(path);
 
-        // Validate path is within workdir (prevents path traversal)
-        validate_path(&full_path, Path::new(&ctx.workdir)).await?;
-
+        // Validate parent directory is within workdir (prevents path traversal).
+        // We canonicalize the parent because the file itself does not exist yet.
         if let Some(parent) = full_path.parent() {
+            validate_parent_path(parent, Path::new(&ctx.workdir)).await?;
             tokio::fs::create_dir_all(parent)
                 .await
                 .map_err(|e| CoreError::Io(e.to_string()))?;
@@ -124,7 +151,7 @@ impl Tool for ListDirTool {
         let full_path = PathBuf::from(&ctx.workdir).join(rel_path);
 
         // Validate path is within workdir (prevents path traversal)
-        validate_path(&full_path, Path::new(&ctx.workdir)).await?;
+        validate_file_path(&full_path, Path::new(&ctx.workdir)).await?;
 
         let mut entries = tokio::fs::read_dir(&full_path)
             .await

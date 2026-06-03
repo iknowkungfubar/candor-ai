@@ -1,0 +1,19 @@
+[advisories]
+# Known transitive dependency warnings (tracked for upstream fixes)
+# All of these come from surrealdb / wasmtime transitive dependency trees.
+
+# atomic-polyfill 1.0.3 — unmaintained (transitive via surrealdb -> geo-types -> rstar -> heapless)
+# Tracked: https://github.com/surrealdb/surrealdb/issues
+ignore = ["RUSTSEC-2023-0089"]
+
+# bincode 1.3.3 — unmaintained (transitive via surrealdb-core, surrealdb)
+# Tracked: https://github.com/surrealdb/surrealdb/issues
+# ignore = ["RUSTSEC-2025-0141"]  # Uncomment when bincode version is updated upstream
+
+# fxhash 0.2.1 — unmaintained (transitive via wasmtime -> fxprof-processed-profile)
+# Tracked: https://github.com/bytecodealliance/wasmtime/issues
+# ignore = ["RUSTSEC-2025-0057"]  # Uncomment when wasmtime updates this dep
+
+# lru 0.12.5 — unsound (transitive via surrealdb-core -> surrealkv)
+# Tracked: https://github.com/surrealdb/surrealdb/issues
+# ignore = ["RUSTSEC-2026-0002"]  # Uncomment when surrealdb updates this dep

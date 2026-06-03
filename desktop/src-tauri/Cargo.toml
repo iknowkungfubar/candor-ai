@@ -3,7 +3,7 @@ name = "candor-ai-desktop"
 version = "0.1.0"
 description = "Candor AI Desktop - Tauri v2 Frontend"
 authors = ["Candor AI"]
-edition = "2021"
+edition = "2024"
 
 [lib]
 name = "candor_ai_desktop_lib"

@@ -188,7 +188,9 @@ async fn auth_middleware(
                 .and_then(|v| v.to_str().ok())
                 .unwrap_or("");
 
-            let expected = format!("Bearer {}", api_key.unwrap());
+            // SAFETY: should_check verified api_key is Some and non-empty
+            let key = api_key.as_ref().unwrap();
+            let expected = format!("Bearer {key}");
             if auth_header != expected {
                 return (
                     axum::http::StatusCode::UNAUTHORIZED,
@@ -314,7 +316,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         HeaderValue::from_static("http://127.0.0.1:5173"),
                         HeaderValue::from_static("http://127.0.0.1:31337"),
                         HeaderValue::from_static("tauri://localhost"),
-                        HeaderValue::from_static("null"),
+                        // NOTE: "null" origin is intentionally excluded from production.
+                        // It is needed for some local Tauri webview contexts, but adds
+                        // attack surface. Add explicitly if required for your setup.
                     ]))
                     .allow_methods([axum::http::Method::GET, axum::http::Method::POST])
                     .allow_credentials(true))

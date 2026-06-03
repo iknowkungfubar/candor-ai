@@ -35,19 +35,19 @@ pub enum ViolationSeverity {
 
 // ── Compiled regexes for common slop patterns ──
 static TODO_REGEX: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"(?i)//\s*TODO|#\s*TODO|/\*.*?TODO").unwrap());
+    LazyLock::new(|| Regex::new(r"(?i)//\s*TODO|#\s*TODO|/\*.*?TODO").expect("Invalid TODO regex"));
 
 static NARRATION_REGEX: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?i)(this\s+function|here\s+we|let's|now\s+we|first\s+we|next\s+we)\s+(create|define|implement|set\s+up|build|add|write)").unwrap()
+    Regex::new(r"(?i)(this\s+function|here\s+we|let's|now\s+we|first\s+we|next\s+we)\s+(create|define|implement|set\s+up|build|add|write)").expect("Invalid narration regex")
 });
 
 static FORCE_PUSH_REGEX: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"git\s+push\s+(-f|--force)").unwrap());
+    LazyLock::new(|| Regex::new(r"git\s+push\s+(-f|--force)").expect("Invalid force-push regex"));
 
-static RM_RF_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"rm\s+-rf\s+/").unwrap());
+static RM_RF_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"rm\s+-rf\s+/").expect("Invalid rm-rf regex"));
 
 static DEAD_CODE_REGEX: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r#"(?i)(if\s+false|while\s+false|unreachable!\(\s*"never"\s*\))"#).unwrap()
+    Regex::new(r#"(?i)(if\s+false|while\s+false|unreachable!\(\s*"never"\s*\))"#).expect("Invalid dead-code regex")
 });
 
 /// Run all deterministic rules against a payload.
@@ -131,12 +131,14 @@ pub async fn verify_file_exists(path: &str) -> Result<bool, CoreError> {
 
 /// Check that a proposed commit message follows conventional commits.
 pub fn check_conventional_commit(message: &str) -> RulesCheck {
-    let conventional_regex = Regex::new(
-        r"^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\(.+\))?!?: .+",
-    )
-    .unwrap();
+    static CONVENTIONAL_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(
+            r"^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\(.+\))?!?: .+",
+        )
+        .expect("Invalid conventional-commit regex")
+    });
 
-    if conventional_regex.is_match(message.trim()) {
+    if CONVENTIONAL_REGEX.is_match(message.trim()) {
         RulesCheck {
             passed: true,
             violations: vec![],

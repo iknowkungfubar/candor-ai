@@ -72,8 +72,13 @@ chrono = { version = "0.4", features = ["serde"] }
 uuid = { version = "1", features = ["v4", "serde"] }
 
 # Sandbox / WASM
-wasmtime = { version = "36", features = ["async"] }
+wasmtime = { version = ">=36.0.8", features = ["async"] }
 cap-std = "3"
+
+# Transitive dependency pins (dependabot security)
+# These force minimum versions for security fixes in indirect deps
+jsonwebtoken = ">=10.3.0"
+lru = ">=0.16.3"
 
 # HTTP server
 axum = { version = "0.8", features = ["ws"] }

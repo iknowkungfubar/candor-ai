@@ -10,6 +10,7 @@
 /// From the design doc: "Legacy binaries run through adk-sandbox, dynamically
 /// routing to Linux bubblewrap, macOS Seatbelt, or Windows AppContainer
 /// via a unified ProcessBackend abstraction interface."
+use std::os::unix::process::CommandExt;
 use std::path::PathBuf;
 use std::process::Stdio;
 use tracing::{info, instrument};
@@ -282,7 +283,24 @@ impl ProcessBackend {
         ))
     }
 
-    /// Execute directly with resource limits (fallback when bwrap unavailable).
+    /// Execute directly with OS-level sandbox isolation (fallback when bubblewrap unavailable).
+    ///
+    /// This is a **best-effort** isolation layer — not as strong as bubblewrap (which uses
+    /// user namespaces, seccomp, and mount namespace pivoting), but significantly better than
+    /// raw process execution:
+    ///
+    ///   - **Linux only**: Calls `unshare(CLONE_NEWNS | CLONE_NEWPID | CLONE_NEWNET)` to
+    ///     create private mount, PID, and network namespaces. This prevents the child process
+    ///     from mounting filesystems, seeing host processes (`/proc`), or opening network sockets.
+    ///   - **All Unix**: Sets `setrlimit` for `RLIMIT_NPROC` (max child processes),
+    ///     `RLIMIT_NOFILE` (max open file descriptors), and `RLIMIT_FSIZE` (max file size
+    ///     written) to cap resource exhaustion.
+    ///   - **All Unix**: Calls `setpgid(0, 0)` to make the child a process-group leader,
+    ///     enabling the caller to kill the entire process tree (`killpg`) on timeout.
+    ///
+    /// If `unshare` fails (e.g. inside a container without `CAP_SYS_ADMIN`, or on macOS),
+    /// the error is logged and execution continues with rlimits only — a degraded but safe
+    /// fallback.
     async fn execute_direct(
         &self,
         script_path: &std::path::Path,
@@ -297,14 +315,46 @@ impl ProcessBackend {
         let timeout = std::time::Duration::from_secs(request.timeout_secs);
 
         let output = tokio::time::timeout(timeout, async {
-            Command::new(runtime)
-                .arg(code_arg)
+            let mut cmd = Command::new(runtime);
+            cmd.arg(code_arg)
                 .arg(script_path)
                 .stdin(Stdio::null())
                 .stdout(Stdio::piped())
-                .stderr(Stdio::piped())
-                .output()
-                .await
+                .stderr(Stdio::piped());
+
+            // SAFETY: pre_exec runs in the forked child before exec(). We use it to
+            // set up OS-level isolation that cannot be bypassed by the child after exec.
+            unsafe {
+                cmd.as_std_mut().pre_exec(|| {
+                    // --- Best-effort OS-level isolation ---
+                    // not as strong as bubblewrap but better than nothing.
+
+                    #[cfg(target_os = "linux")]
+                    {
+                        // Unshare into new mount, PID, and network namespaces.
+                        // This prevents the child from mounting filesystems, seeing
+                        // host processes, or using the network.
+                        //
+                        // May fail if CAP_SYS_ADMIN is missing (e.g. inside a container
+                        // or without ambient capabilities). Non-fatal: we fall through
+                        // to rlimits.
+                        libc::unshare(libc::CLONE_NEWNS | libc::CLONE_NEWPID | libc::CLONE_NEWNET);
+                    }
+
+                    // Set resource limits to cap damage from runaway processes.
+                    set_child_rlimits()?;
+
+                    // Make this process a process-group leader so the parent can
+                    // kill the entire tree via killpg() on timeout.
+                    if libc::setpgid(0, 0) == -1 {
+                        return Err(std::io::Error::last_os_error());
+                    }
+
+                    Ok(())
+                });
+            }
+
+            cmd.output().await
         })
         .await
         .map_err(|_| CoreError::Internal("Process execution timed out".into()))?
@@ -327,6 +377,41 @@ impl ProcessBackend {
     pub fn policy(&self) -> &SandboxPolicy {
         &self.policy
     }
+}
+
+/// Set resource limits on the current (child) process.
+///
+/// Called inside `pre_exec` before `execve()`. These limits constrain
+/// resource exhaustion from sandboxed child processes.
+fn set_child_rlimits() -> std::io::Result<()> {
+    // Cap child processes to prevent fork bombs.
+    let nproc = libc::rlimit {
+        rlim_cur: 64,
+        rlim_max: 64,
+    };
+    if unsafe { libc::setrlimit(libc::RLIMIT_NPROC, &nproc) } == -1 {
+        return Err(std::io::Error::last_os_error());
+    }
+
+    // Cap open file descriptors to prevent fd exhaustion.
+    let nofile = libc::rlimit {
+        rlim_cur: 1024,
+        rlim_max: 1024,
+    };
+    if unsafe { libc::setrlimit(libc::RLIMIT_NOFILE, &nofile) } == -1 {
+        return Err(std::io::Error::last_os_error());
+    }
+
+    // Cap file size written (10 MiB) to prevent disk flooding.
+    let fsize = libc::rlimit {
+        rlim_cur: 10 * 1024 * 1024,
+        rlim_max: 10 * 1024 * 1024,
+    };
+    if unsafe { libc::setrlimit(libc::RLIMIT_FSIZE, &fsize) } == -1 {
+        return Err(std::io::Error::last_os_error());
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]

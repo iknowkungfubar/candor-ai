@@ -13,9 +13,9 @@
 ///   serve   Start REST API daemon (default with --port)
 use std::sync::Arc;
 
-use axum::{Router, middleware};
 use axum::http::HeaderValue;
 use axum::response::IntoResponse;
+use axum::{Router, middleware};
 use clap::{Parser, Subcommand};
 use tower_http::cors::{AllowOrigin, CorsLayer};
 use tracing::info;
@@ -176,9 +176,12 @@ async fn auth_middleware(
     next: middleware::Next,
 ) -> impl axum::response::IntoResponse {
     let api_key = std::env::var("CANDOR_API_KEY").ok();
-    let should_check = api_key.as_ref().map_or(false, |k| !k.is_empty());
 
-    if should_check {
+    if let Some(key) = api_key {
+        if key.is_empty() {
+            return next.run(req).await;
+        }
+
         let path = req.uri().path();
         // Allow health check without auth
         if path != "/api/health" {
@@ -188,8 +191,6 @@ async fn auth_middleware(
                 .and_then(|v| v.to_str().ok())
                 .unwrap_or("");
 
-            // SAFETY: should_check verified api_key is Some and non-empty
-            let key = api_key.as_ref().unwrap();
             let expected = format!("Bearer {key}");
             if auth_header != expected {
                 return (
@@ -309,19 +310,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .route("/api/task", axum::routing::post(routes::submit_task))
                 .route("/api/metrics", axum::routing::get(routes::metrics))
                 .layer(middleware::from_fn(auth_middleware))
-                .layer(CorsLayer::new()
-                    .allow_origin(AllowOrigin::list([
-                        HeaderValue::from_static("http://localhost:5173"),
-                        HeaderValue::from_static("http://localhost:31337"),
-                        HeaderValue::from_static("http://127.0.0.1:5173"),
-                        HeaderValue::from_static("http://127.0.0.1:31337"),
-                        HeaderValue::from_static("tauri://localhost"),
-                        // NOTE: "null" origin is intentionally excluded from production.
-                        // It is needed for some local Tauri webview contexts, but adds
-                        // attack surface. Add explicitly if required for your setup.
-                    ]))
-                    .allow_methods([axum::http::Method::GET, axum::http::Method::POST])
-                    .allow_credentials(true))
+                .layer(
+                    CorsLayer::new()
+                        .allow_origin(AllowOrigin::list([
+                            HeaderValue::from_static("http://localhost:5173"),
+                            HeaderValue::from_static("http://localhost:31337"),
+                            HeaderValue::from_static("http://127.0.0.1:5173"),
+                            HeaderValue::from_static("http://127.0.0.1:31337"),
+                            HeaderValue::from_static("tauri://localhost"),
+                        ]))
+                        .allow_methods([axum::http::Method::GET, axum::http::Method::POST])
+                        .allow_credentials(true),
+                )
                 .with_state(state);
             let addr = format!("127.0.0.1:{}", port);
             info!("Candor AI daemon listening on http://{addr}");
@@ -480,17 +480,17 @@ async fn build_cognitive(
         let m = model_name
             .clone()
             .unwrap_or_else(|| "claude-sonnet-4-20250514".into());
-        backend = Some(Box::new(AnthropicBackend::new(key.clone(), &m)));
+        backend = Some(Box::new(AnthropicBackend::new(key.clone(), &m)?));
         label = format!("anthropic/{m}");
     } else if let Some(ref key) = env::var("DEEPSEEK_API_KEY").ok().as_ref() {
         let m = model_name.clone().unwrap_or_else(|| "deepseek-chat".into());
-        backend = Some(Box::new(DeepSeekBackend::new(key.to_string(), &m)));
+        backend = Some(Box::new(DeepSeekBackend::new(key.to_string(), &m)?));
         label = format!("deepseek/{m}");
     } else if let Some(ref key) = env::var("GEMINI_API_KEY").ok().as_ref() {
         let m = model_name
             .clone()
             .unwrap_or_else(|| "gemini-2.5-flash".into());
-        backend = Some(Box::new(GeminiBackend::new(key.to_string(), &m)));
+        backend = Some(Box::new(GeminiBackend::new(key.to_string(), &m)?));
         label = format!("gemini/{m}");
     } else if let Some(ref key) = openai_key {
         let m = model_name.clone().unwrap_or_else(|| "gpt-4o".into());
@@ -498,7 +498,7 @@ async fn build_cognitive(
             key.clone(),
             &m,
             openai_base.clone(),
-        )));
+        )?));
         label = if let Some(ref b) = openai_base {
             format!("openai@{b}/{m}")
         } else {
@@ -510,7 +510,7 @@ async fn build_cognitive(
             "lm-studio".into(),
             &m,
             Some(base),
-        )));
+        )?));
         label = format!("lm-studio/{m}");
     } else if let Ok(base) = env::var("OLLAMA_URL") {
         let m = model_name.unwrap_or_else(|| "llama3".into());
@@ -518,7 +518,7 @@ async fn build_cognitive(
             "ollama".into(),
             &m,
             Some(base),
-        )));
+        )?));
         label = format!("ollama/{m}");
     }
 

@@ -6,8 +6,8 @@ use tracing::{error, info, instrument};
 
 use candor_core::error::CoreError;
 use surrealdb::Surreal;
-use surrealdb::engine::local::Mem;
 use surrealdb::engine::local::Db;
+use surrealdb::engine::local::Mem;
 use surrealdb::types::{Datetime, SerdeWrapper};
 
 /// Represents a single discrete unit of memory inside the vector database.

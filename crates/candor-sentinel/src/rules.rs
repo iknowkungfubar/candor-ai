@@ -44,10 +44,12 @@ static NARRATION_REGEX: LazyLock<Regex> = LazyLock::new(|| {
 static FORCE_PUSH_REGEX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"git\s+push\s+(-f|--force)").expect("Invalid force-push regex"));
 
-static RM_RF_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"rm\s+-rf\s+/").expect("Invalid rm-rf regex"));
+static RM_RF_REGEX: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"rm\s+-rf\s+/").expect("Invalid rm-rf regex"));
 
 static DEAD_CODE_REGEX: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r#"(?i)(if\s+false|while\s+false|unreachable!\(\s*"never"\s*\))"#).expect("Invalid dead-code regex")
+    Regex::new(r#"(?i)(if\s+false|while\s+false|unreachable!\(\s*"never"\s*\))"#)
+        .expect("Invalid dead-code regex")
 });
 
 /// Run all deterministic rules against a payload.

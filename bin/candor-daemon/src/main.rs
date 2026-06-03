@@ -316,9 +316,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         HeaderValue::from_static("http://127.0.0.1:5173"),
                         HeaderValue::from_static("http://127.0.0.1:31337"),
                         HeaderValue::from_static("tauri://localhost"),
-                        // NOTE: "null" origin is intentionally excluded from production.
-                        // It is needed for some local Tauri webview contexts, but adds
-                        // attack surface. Add explicitly if required for your setup.
                     ]))
                     .allow_methods([axum::http::Method::GET, axum::http::Method::POST])
                     .allow_credentials(true))

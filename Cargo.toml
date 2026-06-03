@@ -92,7 +92,7 @@ clap = { version = "4", features = ["derive", "env"] }
 surrealdb = { version = "3", features = ["kv-mem"] }
 
 # HTTP client
-reqwest = { version = "0.12", features = ["json", "stream"] }
+reqwest = { version = "0.13", features = ["json", "stream"] }
 
 # Testing
 tempfile = "3"

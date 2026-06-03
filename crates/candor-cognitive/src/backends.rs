@@ -130,18 +130,18 @@ impl std::fmt::Debug for OpenAiBackend {
 }
 
 impl OpenAiBackend {
-    pub fn new(api_key: String, model: impl Into<String>, base_url: Option<String>) -> Self {
+    pub fn new(api_key: String, model: impl Into<String>, base_url: Option<String>) -> Result<Self, CoreError> {
         let client = reqwest::Client::builder()
             .timeout(Duration::from_secs(120))
             .build()
-            .expect("Failed to create HTTP client");
-        Self {
+            .map_err(|e| CoreError::Internal(format!("Failed to create HTTP client: {e}")))?;
+        Ok(Self {
             api_key,
             model: model.into(),
             base_url: base_url.unwrap_or_else(|| "https://api.openai.com/v1".into()),
             client,
             cb: Arc::new(CircuitBreaker::new(3, Duration::from_secs(30))),
-        }
+        })
     }
 }
 
@@ -235,17 +235,17 @@ impl std::fmt::Debug for AnthropicBackend {
 }
 
 impl AnthropicBackend {
-    pub fn new(api_key: String, model: impl Into<String>) -> Self {
+    pub fn new(api_key: String, model: impl Into<String>) -> Result<Self, CoreError> {
         let client = reqwest::Client::builder()
             .timeout(Duration::from_secs(120))
             .build()
-            .expect("Failed to create HTTP client");
-        Self {
+            .map_err(|e| CoreError::Internal(format!("Failed to create HTTP client: {e}")))?;
+        Ok(Self {
             api_key,
             model: model.into(),
             client,
             cb: Arc::new(CircuitBreaker::new(3, Duration::from_secs(30))),
-        }
+        })
     }
 }
 
@@ -336,17 +336,17 @@ impl std::fmt::Debug for DeepSeekBackend {
 }
 
 impl DeepSeekBackend {
-    pub fn new(api_key: String, model: impl Into<String>) -> Self {
+    pub fn new(api_key: String, model: impl Into<String>) -> Result<Self, CoreError> {
         let client = reqwest::Client::builder()
             .timeout(Duration::from_secs(120))
             .build()
-            .expect("Failed to create HTTP client");
-        Self {
+            .map_err(|e| CoreError::Internal(format!("Failed to create HTTP client: {e}")))?;
+        Ok(Self {
             api_key,
             model: model.into(),
             client,
             cb: Arc::new(CircuitBreaker::new(3, Duration::from_secs(30))),
-        }
+        })
     }
 }
 
@@ -438,17 +438,17 @@ impl std::fmt::Debug for GeminiBackend {
 }
 
 impl GeminiBackend {
-    pub fn new(api_key: String, model: impl Into<String>) -> Self {
+    pub fn new(api_key: String, model: impl Into<String>) -> Result<Self, CoreError> {
         let client = reqwest::Client::builder()
             .timeout(Duration::from_secs(120))
             .build()
-            .expect("Failed to create HTTP client");
-        Self {
+            .map_err(|e| CoreError::Internal(format!("Failed to create HTTP client: {e}")))?;
+        Ok(Self {
             api_key,
             model: model.into(),
             client,
             cb: Arc::new(CircuitBreaker::new(3, Duration::from_secs(30))),
-        }
+        })
     }
 }
 

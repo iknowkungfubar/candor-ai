@@ -37,7 +37,9 @@ COPY --from=builder /candor /usr/local/bin/candor
 
 EXPOSE 31337
 
-ENV CANDOR_HOME=/root/.candor
+ENV CANDOR_HOME=/home/candor/.candor
+
+USER 1000
 
 ENTRYPOINT ["candor"]
 CMD ["serve", "--port", "31337"]

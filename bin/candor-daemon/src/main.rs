@@ -13,9 +13,11 @@
 ///   serve   Start REST API daemon (default with --port)
 use std::sync::Arc;
 
-use axum::Router;
+use axum::{Router, middleware};
+use axum::http::HeaderValue;
+use axum::response::IntoResponse;
 use clap::{Parser, Subcommand};
-use tower_http::cors::CorsLayer;
+use tower_http::cors::{AllowOrigin, CorsLayer};
 use tracing::info;
 
 use candor_cognitive::{
@@ -165,6 +167,41 @@ enum PdaAction {
     Monitor,
 }
 
+// ── Auth middleware ──
+
+/// Middleware that checks Authorization: Bearer against CANDOR_API_KEY env var.
+/// Skipped if CANDOR_API_KEY is empty or not set, or for GET /api/health.
+async fn auth_middleware(
+    req: axum::http::Request<axum::body::Body>,
+    next: middleware::Next,
+) -> impl axum::response::IntoResponse {
+    let api_key = std::env::var("CANDOR_API_KEY").ok();
+    let should_check = api_key.as_ref().map_or(false, |k| !k.is_empty());
+
+    if should_check {
+        let path = req.uri().path();
+        // Allow health check without auth
+        if path != "/api/health" {
+            let auth_header = req
+                .headers()
+                .get("Authorization")
+                .and_then(|v| v.to_str().ok())
+                .unwrap_or("");
+
+            let expected = format!("Bearer {}", api_key.unwrap());
+            if auth_header != expected {
+                return (
+                    axum::http::StatusCode::UNAUTHORIZED,
+                    "Unauthorized: invalid or missing API key. Set Authorization: Bearer <CANDOR_API_KEY>",
+                )
+                    .into_response();
+            }
+        }
+    }
+
+    next.run(req).await
+}
+
 #[derive(Clone)]
 pub struct AppState {
     pub orchestrator: Arc<tokio::sync::Mutex<OrchestratorEngine>>,
@@ -269,9 +306,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .route("/api/status", axum::routing::get(routes::status))
                 .route("/api/task", axum::routing::post(routes::submit_task))
                 .route("/api/metrics", axum::routing::get(routes::metrics))
-                .layer(CorsLayer::permissive())
+                .layer(middleware::from_fn(auth_middleware))
+                .layer(CorsLayer::new()
+                    .allow_origin(AllowOrigin::list([
+                        HeaderValue::from_static("http://localhost:5173"),
+                        HeaderValue::from_static("http://localhost:31337"),
+                        HeaderValue::from_static("http://127.0.0.1:5173"),
+                        HeaderValue::from_static("http://127.0.0.1:31337"),
+                        HeaderValue::from_static("tauri://localhost"),
+                        HeaderValue::from_static("null"),
+                    ]))
+                    .allow_methods([axum::http::Method::GET, axum::http::Method::POST])
+                    .allow_credentials(true))
                 .with_state(state);
-            let addr = format!("0.0.0.0:{}", port);
+            let addr = format!("127.0.0.1:{}", port);
             info!("Candor AI daemon listening on http://{addr}");
             let listener = tokio::net::TcpListener::bind(&addr).await?;
             axum::serve(listener, app).await?;
@@ -663,7 +711,7 @@ fn init_project(dir: &str) -> Result<(), Box<dyn std::error::Error>> {
     std::fs::create_dir_all(&path)?;
     std::fs::write(
         path.join("candor.toml"),
-        "[server]\nhost = \"0.0.0.0\"\nport = 31337\ncheckpoint_dir = \"/tmp/candor-checkpoints\"\nmax_iterations = 100\n\n[sandbox]\nscratchpad_dir = \"/tmp/agent_scratchpad\"\ndefault_timeout_secs = 15\ndefault_memory_mb = 256\n\n[inference]\n# anthropic_api_key = \"sk-ant-...\"\n# openai_api_key = \"sk-...\"\nembedding_model = \"all-MiniLM-L6-v2\"\nembedding_dim = 384\n\n[memory]\nbackend = \"mem\"\ncompaction_token_limit = 135000\n",
+        "[server]\nhost = \"127.0.0.1\"\nport = 31337\ncheckpoint_dir = \"/tmp/candor-checkpoints\"\nmax_iterations = 100\n\n[sandbox]\nscratchpad_dir = \"/tmp/agent_scratchpad\"\ndefault_timeout_secs = 15\ndefault_memory_mb = 256\n\n[inference]\n# anthropic_api_key = \"sk-ant-...\"\n# openai_api_key = \"sk-...\"\nembedding_model = \"all-MiniLM-L6-v2\"\nembedding_dim = 384\n\n[memory]\nbackend = \"mem\"\ncompaction_token_limit = 135000\n",
     )?;
     std::fs::write(path.join(".gitignore"), "/target/\n.env\n/tmp/\n")?;
     println!(

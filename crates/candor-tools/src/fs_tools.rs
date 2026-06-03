@@ -1,10 +1,32 @@
 /// Filesystem tools: read, write, list directory.
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use tracing::info;
 
 use candor_core::error::CoreError;
 
 use super::registry::{Tool, ToolContext, ToolOutput};
+
+/// Validate that a resolved path is within the allowed workdir.
+/// Uses canonicalize to prevent path traversal via `..` or symlinks.
+async fn validate_path(resolved: &Path, workdir: &Path) -> Result<(), CoreError> {
+    // Canonicalize both paths to resolve symlinks and `..` components
+    let canonical_resolved = tokio::fs::canonicalize(resolved)
+        .await
+        .map_err(|e| CoreError::Io(format!("Path validation failed for {}: {e}", resolved.display())))?;
+
+    let canonical_workdir = tokio::fs::canonicalize(workdir)
+        .await
+        .map_err(|e| CoreError::Io(format!("Workdir canonicalization failed: {e}")))?;
+
+    if !canonical_resolved.starts_with(&canonical_workdir) {
+        return Err(CoreError::Io(format!(
+            "Path traversal denied: {} escapes the working directory {}",
+            resolved.display(),
+            canonical_workdir.display()
+        )));
+    }
+    Ok(())
+}
 
 pub struct ReadFileTool;
 
@@ -24,6 +46,10 @@ impl Tool for ReadFileTool {
         let max_lines: usize = args.get(1).and_then(|s| s.parse().ok()).unwrap_or(500);
 
         let full_path = PathBuf::from(&ctx.workdir).join(path);
+
+        // Validate path is within workdir (prevents path traversal)
+        validate_path(&full_path, Path::new(&ctx.workdir)).await?;
+
         info!(path = %full_path.display(), "Reading file");
 
         let content = tokio::fs::read_to_string(&full_path)
@@ -59,6 +85,10 @@ impl Tool for WriteFileTool {
         let content = args.get(1).cloned().unwrap_or_default();
 
         let full_path = PathBuf::from(&ctx.workdir).join(path);
+
+        // Validate path is within workdir (prevents path traversal)
+        validate_path(&full_path, Path::new(&ctx.workdir)).await?;
+
         if let Some(parent) = full_path.parent() {
             tokio::fs::create_dir_all(parent)
                 .await
@@ -92,6 +122,9 @@ impl Tool for ListDirTool {
     async fn execute(&self, ctx: &ToolContext, args: &[String]) -> Result<ToolOutput, CoreError> {
         let rel_path = args.first().map(|s| s.as_str()).unwrap_or(".");
         let full_path = PathBuf::from(&ctx.workdir).join(rel_path);
+
+        // Validate path is within workdir (prevents path traversal)
+        validate_path(&full_path, Path::new(&ctx.workdir)).await?;
 
         let mut entries = tokio::fs::read_dir(&full_path)
             .await

@@ -479,17 +479,18 @@ impl LlmBackend for GeminiBackend {
         }
 
         let url = format!(
-            "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={}",
-            &self.api_key
+            "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
         );
 
         let resp = call_with_protection(&self.cb, || {
             let body = body.clone();
             let url = url.clone();
+            let key = self.api_key.clone();
             let client = self.client.clone();
             async move {
                 let r = client
                     .post(&url)
+                    .header("X-Goog-Api-Key", &key)
                     .header("Content-Type", "application/json")
                     .json(&body)
                     .send()

@@ -5,8 +5,10 @@ use tokio::sync::OnceCell;
 use tracing::{error, info, instrument};
 
 use candor_core::error::CoreError;
-
-static SCHEMA_INIT: OnceCell<()> = OnceCell::const_new();
+use surrealdb::Surreal;
+use surrealdb::engine::local::Mem;
+use surrealdb::engine::local::Db;
+use surrealdb::types::{Datetime, SerdeWrapper};
 
 /// Represents a single discrete unit of memory inside the vector database.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -14,13 +16,14 @@ pub struct MemoryBlock {
     pub project_id: String,
     pub textual_content: String,
     pub semantic_embedding: Vec<f32>,
-    pub timestamp: surrealdb::sql::Datetime,
+    pub timestamp: Datetime,
 }
 
 /// The unified storage engine managing document and vector data.
 pub struct MemorySystem {
-    db: surrealdb::Surreal<surrealdb::engine::local::Db>,
+    db: Surreal<Db>,
     embedding_dim: usize,
+    schema_init: OnceCell<()>,
 }
 
 impl MemorySystem {
@@ -29,7 +32,7 @@ impl MemorySystem {
     pub async fn new(embedding_dim: usize) -> Result<Self, CoreError> {
         info!("Creating SurrealDB connection (schema init deferred)");
 
-        let db = surrealdb::Surreal::new::<surrealdb::engine::local::Mem>(())
+        let db = Surreal::new::<Mem>(())
             .await
             .map_err(|e| CoreError::Internal(format!("SurrealDB connect failed: {e}")))?;
 
@@ -39,12 +42,16 @@ impl MemorySystem {
             .map_err(|e| CoreError::Internal(format!("SurrealDB ns/db error: {e}")))?;
 
         info!("SurrealDB memory engine ready (lazy schema)");
-        Ok(Self { db, embedding_dim })
+        Ok(Self {
+            db,
+            embedding_dim,
+            schema_init: OnceCell::new(),
+        })
     }
 
     /// Lazily initialize schema on first actual operation.
     async fn ensure_schema(&self) -> Result<(), CoreError> {
-        SCHEMA_INIT
+        self.schema_init
             .get_or_try_init(|| async {
                 info!("Running lazy SurrealDB schema init");
                 let schema_queries = super::schema::schema_queries(self.embedding_dim);
@@ -82,14 +89,14 @@ impl MemorySystem {
             project_id,
             textual_content: content,
             semantic_embedding: embedding,
-            timestamp: surrealdb::sql::Datetime::default(),
+            timestamp: Datetime::now(),
         };
 
         tokio::time::timeout(Duration::from_secs(5), async {
-            let _created: Option<MemoryBlock> = self
+            let _created: Option<SerdeWrapper<MemoryBlock>> = self
                 .db
                 .create("memory_block")
-                .content(entry)
+                .content(SerdeWrapper(entry))
                 .await
                 .map_err(|e| CoreError::Internal(format!("Store failed: {e}")))?;
             Ok::<_, CoreError>(())
@@ -122,15 +129,16 @@ impl MemorySystem {
             let mut result = self
                 .db
                 .query(sql)
-                .bind(("query_vector", query_embedding))
+                .bind(("query_vector", SerdeWrapper(query_embedding)))
                 .bind(("pid", project_id.to_string()))
                 .bind(("limit", top_k))
                 .await
                 .map_err(|e| CoreError::Internal(format!("Retrieve failed: {e}")))?;
 
-            let contents: Vec<String> = result
-                .take::<Vec<serde_json::Value>>(0)
-                .map_err(|e| CoreError::Internal(format!("Deserialize failed: {e}")))?
+            let content_values: Vec<serde_json::Value> = result
+                .take(0)
+                .map_err(|e| CoreError::Internal(format!("Deserialize failed: {e}")))?;
+            let contents: Vec<String> = content_values
                 .into_iter()
                 .filter_map(|val| val.get("textual_content")?.as_str().map(|s| s.to_string()))
                 .collect();
@@ -158,7 +166,7 @@ impl MemorySystem {
             phase: String,
             action: String,
             result: String,
-            timestamp: surrealdb::sql::Datetime,
+            timestamp: Datetime,
         }
 
         let entry = LogEntry {
@@ -166,17 +174,17 @@ impl MemorySystem {
             phase: phase.to_string(),
             action: action.to_string(),
             result: result.to_string(),
-            timestamp: surrealdb::sql::Datetime::default(),
+            timestamp: Datetime::now(),
         };
 
-        let _created: Option<LogEntry> = tokio::time::timeout(Duration::from_secs(5), async {
-            let created: Option<LogEntry> = self
+        tokio::time::timeout(Duration::from_secs(5), async {
+            let _created: Option<SerdeWrapper<LogEntry>> = self
                 .db
                 .create("execution_log")
-                .content(entry)
+                .content(SerdeWrapper(entry))
                 .await
                 .map_err(|e| CoreError::Internal(format!("Store log failed: {e}")))?;
-            Ok::<_, CoreError>(created)
+            Ok::<_, CoreError>(())
         })
         .await
         .map_err(|_| CoreError::Internal("Store execution log timed out after 5s".into()))??;
@@ -209,18 +217,18 @@ impl MemorySystem {
             phase: String,
             action: String,
             result: String,
-            timestamp: surrealdb::sql::Datetime,
+            timestamp: Datetime,
         }
 
         let rows: Vec<RawLog> = tokio::time::timeout(Duration::from_secs(5), async {
-            let rows: Vec<RawLog> = self
+            let rows: Vec<SerdeWrapper<RawLog>> = self
                 .db
                 .query("SELECT session_id, phase, action, result, timestamp FROM execution_log ORDER BY timestamp ASC")
                 .await
                 .map_err(|e| CoreError::Internal(format!("Query execution logs failed: {e}")))?
                 .take(0)
                 .map_err(|e| CoreError::Internal(format!("Deserialize execution logs failed: {e}")))?;
-            Ok::<_, CoreError>(rows)
+            Ok::<_, CoreError>(rows.into_iter().map(|w| w.0).collect())
         })
         .await
         .map_err(|_| CoreError::Internal("Get all execution logs timed out after 5s".into()))??;
@@ -268,11 +276,11 @@ impl MemorySystem {
             phase: String,
             action: String,
             result: String,
-            timestamp: surrealdb::sql::Datetime,
+            timestamp: Datetime,
         }
 
         let rows: Vec<RawLog> = tokio::time::timeout(Duration::from_secs(5), async {
-            let rows: Vec<RawLog> = self
+            let rows: Vec<SerdeWrapper<RawLog>> = self
                 .db
                 .query("SELECT session_id, phase, action, result, timestamp FROM execution_log WHERE session_id = $sid ORDER BY timestamp ASC")
                 .bind(("sid", session_id.to_string()))
@@ -280,7 +288,7 @@ impl MemorySystem {
                 .map_err(|e| CoreError::Internal(format!("Query session logs failed: {e}")))?
                 .take(0)
                 .map_err(|e| CoreError::Internal(format!("Deserialize session logs failed: {e}")))?;
-            Ok::<_, CoreError>(rows)
+            Ok::<_, CoreError>(rows.into_iter().map(|w| w.0).collect())
         })
         .await
         .map_err(|_| CoreError::Internal("Get execution logs by session timed out after 5s".into()))??;
@@ -309,5 +317,5 @@ pub struct ExecutionLogEntry {
     pub phase: String,
     pub action: String,
     pub result: String,
-    pub timestamp: surrealdb::sql::Datetime,
+    pub timestamp: Datetime,
 }

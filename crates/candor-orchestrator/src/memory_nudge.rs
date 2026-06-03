@@ -148,7 +148,7 @@ fn derive_embedding(text: &str, dim: usize) -> Vec<f32> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use surrealdb::sql::Datetime;
+    use surrealdb::types::Datetime;
 
     /// Helper to create a log entry for tests.
     fn make_log(session: &str, phase: &str, action: &str, result: &str) -> ExecutionLogEntry {
@@ -157,7 +157,7 @@ mod tests {
             phase: phase.to_string(),
             action: action.to_string(),
             result: result.to_string(),
-            timestamp: Datetime::default(),
+            timestamp: Datetime::now(),
         }
     }
 

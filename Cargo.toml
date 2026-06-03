@@ -89,7 +89,7 @@ tower-http = { version = "0.6", features = ["cors", "trace"] }
 clap = { version = "4", features = ["derive", "env"] }
 
 # Database
-surrealdb = { version = "2", features = ["kv-mem"] }
+surrealdb = { version = "3", features = ["kv-mem"] }
 
 # HTTP client
 reqwest = { version = "0.12", features = ["json", "stream"] }

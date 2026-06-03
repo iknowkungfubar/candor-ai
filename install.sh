@@ -7,6 +7,13 @@ REPO="iknowkungfubar/candor-ai"
 BIN_NAME="candor"
 INSTALL_DIR="${CANDOR_INSTALL_DIR:-/usr/local/bin}"
 
+UPGRADE="${CANDOR_UPGRADE:-false}"
+for arg in "$@"; do
+    case "$arg" in
+        --upgrade|-u) UPGRADE=true ;;
+    esac
+done
+
 # Detect OS and architecture
 OS="$(uname -s)"
 ARCH="$(uname -m)"
@@ -31,20 +38,34 @@ esac
 
 # Check for existing binary
 if command -v "$BIN_NAME" &>/dev/null; then
-    echo "  Candor AI already installed at $(which $BIN_NAME)"
-    echo "  To upgrade, uninstall first or use: cargo install candor-daemon"
-    exit 0
+    if [ "$UPGRADE" = "true" ]; then
+        echo "  Upgrading Candor AI..."
+    else
+        echo "  Candor AI already installed at $(which $BIN_NAME)"
+        echo "  To upgrade, re-run with: curl -sfL ... | sh -s -- --upgrade"
+        echo "  Or use: cargo install candor-ai --upgrade"
+        exit 0
+    fi
 fi
 
 # Check for Rust toolchain as fallback
 if command -v cargo &>/dev/null; then
     echo "  Rust toolchain detected — installing via cargo..."
-    cargo install candor-daemon 2>/dev/null && {
-        echo "  ✅ Candor AI installed via cargo"
-        echo "  Run 'candor doctor' to verify"
-        exit 0
-    }
-    echo "  Cargo install failed — try: cargo install candor-daemon"
+    if [ "$UPGRADE" = "true" ]; then
+        cargo install candor-ai --upgrade 2>/dev/null && {
+            echo "  ✅ Candor AI upgraded via cargo"
+            echo "  Run 'candor doctor' to verify"
+            exit 0
+        }
+        echo "  Cargo upgrade failed — try: cargo install candor-ai --upgrade"
+    else
+        cargo install candor-ai 2>/dev/null && {
+            echo "  ✅ Candor AI installed via cargo"
+            echo "  Run 'candor doctor' to verify"
+            exit 0
+        }
+        echo "  Cargo install failed — try: cargo install candor-ai"
+    fi
 fi
 
 # Pre-built binary from GitHub Releases
@@ -68,7 +89,7 @@ else
     echo ""
     echo "  Install Rust and run:"
     echo "    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh"
-    echo "    cargo install candor-daemon"
+    echo "    cargo install candor-ai"
     echo ""
     echo "  Or build from source:"
     echo "    git clone https://github.com/iknowkungfubar/candor-ai"

@@ -51,7 +51,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v8
       - name: Create Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: candor-*/candor-*.tar.gz
           generate_release_notes: true

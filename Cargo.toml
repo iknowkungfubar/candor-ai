@@ -44,7 +44,7 @@ candor-telemetry = { path = "crates/candor-telemetry", version = "1.0" }
 tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros", "sync", "time", "net", "process", "fs", "io-util", "signal"] }
 
 # Graph
-petgraph = "0.7"
+petgraph = "0.8"
 
 # Error handling
 thiserror = "2"

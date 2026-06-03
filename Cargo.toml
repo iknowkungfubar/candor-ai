@@ -73,7 +73,7 @@ uuid = { version = "1", features = ["v4", "serde"] }
 
 # Sandbox / WASM
 wasmtime = { version = ">=36.0.8", features = ["async"] }
-cap-std = "3"
+cap-std = "4"
 
 # Transitive dependency pins (dependabot security)
 # These force minimum versions for security fixes in indirect deps

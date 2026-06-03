@@ -1,6 +1,6 @@
+use std::process::Stdio;
 /// Git tools: branch, commit, push — all gated through the sentinel.
 use std::sync::LazyLock;
-use std::process::Stdio;
 use tracing::info;
 
 use candor_core::error::CoreError;

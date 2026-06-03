@@ -130,7 +130,11 @@ impl std::fmt::Debug for OpenAiBackend {
 }
 
 impl OpenAiBackend {
-    pub fn new(api_key: String, model: impl Into<String>, base_url: Option<String>) -> Result<Self, CoreError> {
+    pub fn new(
+        api_key: String,
+        model: impl Into<String>,
+        base_url: Option<String>,
+    ) -> Result<Self, CoreError> {
         let client = reqwest::Client::builder()
             .timeout(Duration::from_secs(120))
             .build()

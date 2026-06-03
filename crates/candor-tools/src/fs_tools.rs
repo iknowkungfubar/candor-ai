@@ -11,9 +11,12 @@ use super::registry::{Tool, ToolContext, ToolOutput};
 /// NOTE: This function requires the path to exist on disk (for canonicalize).
 async fn validate_file_path(resolved: &Path, workdir: &Path) -> Result<(), CoreError> {
     // Canonicalize both paths to resolve symlinks and `..` components
-    let canonical_resolved = tokio::fs::canonicalize(resolved)
-        .await
-        .map_err(|e| CoreError::Io(format!("Path validation failed for {}: {e}", resolved.display())))?;
+    let canonical_resolved = tokio::fs::canonicalize(resolved).await.map_err(|e| {
+        CoreError::Io(format!(
+            "Path validation failed for {}: {e}",
+            resolved.display()
+        ))
+    })?;
 
     let canonical_workdir = tokio::fs::canonicalize(workdir)
         .await
@@ -32,14 +35,12 @@ async fn validate_file_path(resolved: &Path, workdir: &Path) -> Result<(), CoreE
 /// Validate that a parent directory (for a file-to-be-created) is within workdir.
 /// Canonicalizes the parent dir (which must exist) to prevent path traversal.
 async fn validate_parent_path(parent: &Path, workdir: &Path) -> Result<(), CoreError> {
-    let canonical_parent = tokio::fs::canonicalize(parent)
-        .await
-        .map_err(|e| {
-            CoreError::Io(format!(
-                "Parent directory validation failed for {}: {e}",
-                parent.display()
-            ))
-        })?;
+    let canonical_parent = tokio::fs::canonicalize(parent).await.map_err(|e| {
+        CoreError::Io(format!(
+            "Parent directory validation failed for {}: {e}",
+            parent.display()
+        ))
+    })?;
 
     let canonical_workdir = tokio::fs::canonicalize(workdir)
         .await

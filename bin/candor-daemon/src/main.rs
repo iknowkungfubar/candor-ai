@@ -13,9 +13,9 @@
 ///   serve   Start REST API daemon (default with --port)
 use std::sync::Arc;
 
-use axum::{Router, middleware};
 use axum::http::HeaderValue;
 use axum::response::IntoResponse;
+use axum::{Router, middleware};
 use clap::{Parser, Subcommand};
 use tower_http::cors::{AllowOrigin, CorsLayer};
 use tracing::info;
@@ -310,16 +310,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .route("/api/task", axum::routing::post(routes::submit_task))
                 .route("/api/metrics", axum::routing::get(routes::metrics))
                 .layer(middleware::from_fn(auth_middleware))
-                .layer(CorsLayer::new()
-                    .allow_origin(AllowOrigin::list([
-                        HeaderValue::from_static("http://localhost:5173"),
-                        HeaderValue::from_static("http://localhost:31337"),
-                        HeaderValue::from_static("http://127.0.0.1:5173"),
-                        HeaderValue::from_static("http://127.0.0.1:31337"),
-                        HeaderValue::from_static("tauri://localhost"),
-                    ]))
-                    .allow_methods([axum::http::Method::GET, axum::http::Method::POST])
-                    .allow_credentials(true))
+                .layer(
+                    CorsLayer::new()
+                        .allow_origin(AllowOrigin::list([
+                            HeaderValue::from_static("http://localhost:5173"),
+                            HeaderValue::from_static("http://localhost:31337"),
+                            HeaderValue::from_static("http://127.0.0.1:5173"),
+                            HeaderValue::from_static("http://127.0.0.1:31337"),
+                            HeaderValue::from_static("tauri://localhost"),
+                        ]))
+                        .allow_methods([axum::http::Method::GET, axum::http::Method::POST])
+                        .allow_credentials(true),
+                )
                 .with_state(state);
             let addr = format!("127.0.0.1:{}", port);
             info!("Candor AI daemon listening on http://{addr}");

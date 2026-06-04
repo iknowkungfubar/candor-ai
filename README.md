@@ -1,5 +1,9 @@
 # Candor AI — Lawful Good Rust Agentic Operating System
 
+[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/iknowkungfubar/candor-ai/releases)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![CI](https://github.com/iknowkungfubar/candor-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/iknowkungfubar/candor-ai/actions/workflows/ci.yml)
+
 A production-grade personal AI agent with voice, memory, PDA capabilities, and a pluggable skill ecosystem.
 
 ```bash
@@ -98,7 +102,7 @@ LLM-driven software engineering agent with the **Ideal State Artifact** (ISA) �
 └─────────┴─────────┴─────────┴─────────┴─────────┴──────────┘
 ```
 
-### 10 Crate Workspace
+### 11 Crate Workspace
 
 | Crate | Purpose | Tests |
 |-------|---------|-------|
@@ -115,6 +119,8 @@ LLM-driven software engineering agent with the **Ideal State Artifact** (ISA) �
 | `candor-telemetry` | OpenTelemetry tracing | 1 |
 
 **Total**: ~250+ tests, 0 clippy warnings, 0 compiler warnings, 0 CVEs.
+
+> Built with Rust edition 2024. See [crates.io](https://crates.io/crates/candor-ai) for the published package.
 
 ## Configuration
 

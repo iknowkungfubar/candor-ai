@@ -1,5 +1,3 @@
-# Candor AI — Lawful Good Rust Agentic Operating System
-
 <p align="center">
   <img src="assets/banner.png" alt="Candor AI Banner" width="100%">
 </p>
@@ -7,6 +5,8 @@
 [![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/iknowkungfubar/candor-ai/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![CI](https://github.com/iknowkungfubar/candor-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/iknowkungfubar/candor-ai/actions/workflows/ci.yml)
+
+# Candor AI — Lawful Good Rust Agentic Operating System
 
 A production-grade personal AI agent with voice, memory, PDA capabilities, and a pluggable skill ecosystem.
 

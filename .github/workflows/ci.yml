@@ -110,7 +110,7 @@ jobs:
       - name: Detect secrets
         uses: gitleaks/gitleaks-action@v3
         env:
-          GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build:
     name: Release Build

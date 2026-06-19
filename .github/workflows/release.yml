@@ -55,3 +55,26 @@ jobs:
         with:
           files: candor-*/candor-*.tar.gz
           generate_release_notes: true
+
+  publish-cratesio:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+      - name: Publish to crates.io
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: |
+          cargo publish -p candor-core
+          cargo publish -p candor-graph
+          cargo publish -p candor-sandbox
+          cargo publish -p candor-cognitive
+          cargo publish -p candor-memory
+          cargo publish -p candor-sentinel
+          cargo publish -p candor-tools
+          cargo publish -p candor-mcp
+          cargo publish -p candor-telemetry
+          cargo publish -p candor-orchestrator
+          cargo publish -p candor-daemon

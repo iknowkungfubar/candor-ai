@@ -19,7 +19,7 @@ All 6 design phases complete. 10 crates, 55 source files, 8,144 lines, 108+ test
 | `candor-orchestrator` | 7-phase LLM-driven agent, ISA hill-climbing, self-building skills, trajectory logger |
 | `candor-tools` | 12 tools: fs, search, shell, test, git (sentinel-gated) |
 | `candor-mcp` | MCP client (JSON-RPC 2.0 over stdio/HTTP), auto tool discovery |
-| `candor-daemon` | CLI + axum REST API, LLM auto-detection from env vars |
+| `candor-ai` | CLI + axum REST API, LLM auto-detection from env vars |
 
 ### New in 1.0.0
 

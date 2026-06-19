@@ -1,5 +1,5 @@
 [package]
-name = "candor-daemon"
+name = "candor-ai"
 version.workspace = true
 edition.workspace = true
 description = "Candor AI CLI and REST API daemon with voice, PDA, and 7-phase agent loop"

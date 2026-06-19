@@ -11,7 +11,7 @@ members = [
     "crates/candor-tools",
     "crates/candor-mcp",
     "crates/candor-telemetry",
-    "bin/candor-daemon",
+    "bin/candor-ai",
 ]
 
 [workspace.package]

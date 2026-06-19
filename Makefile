@@ -38,7 +38,7 @@ test-fast:
 	cargo test -p candor-graph
 	cargo test -p candor-sentinel
 	cargo test -p candor-tools
-	cargo test -p candor-daemon
+	cargo test -p candor-ai
 
 install: build
 	cp target/release/$(BINARY) $(PREFIX)/bin/$(BINARY)

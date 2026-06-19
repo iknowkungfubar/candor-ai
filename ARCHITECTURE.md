@@ -63,7 +63,7 @@ Portable sidecar pattern — architecturally isolated from the primary agent:
 
 Eliminates "peer preservation" — the Sentinel cannot develop social alignment with the primary agent.
 
-### 7. Daemon (`candor-daemon`)
+### 7. Daemon (`candor-ai`)
 
 axum HTTP server on port 31337:
 - `GET /` — service info

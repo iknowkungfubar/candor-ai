@@ -77,4 +77,4 @@ jobs:
           cargo publish -p candor-mcp
           cargo publish -p candor-telemetry
           cargo publish -p candor-orchestrator
-          cargo publish -p candor-daemon
+          cargo publish -p candor-ai

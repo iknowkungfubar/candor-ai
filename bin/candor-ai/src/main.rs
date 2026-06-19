@@ -217,7 +217,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Initialise tracing: with OTLP if --otlp-endpoint is set, otherwise fmt.
     let _telemetry =
-        candor_telemetry::init_telemetry("candor-daemon", cli.otlp_endpoint.as_deref());
+        candor_telemetry::init_telemetry("candor-ai", cli.otlp_endpoint.as_deref());
 
     match cli.command {
         Commands::Task {

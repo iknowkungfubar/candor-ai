@@ -8,7 +8,7 @@
 //!
 //! ```ignore
 //! let _guard = candor_telemetry::init_telemetry(
-//!     "candor-daemon",
+//!     "candor-ai",
 //!     Some("http://localhost:4317"),
 //! );
 //!

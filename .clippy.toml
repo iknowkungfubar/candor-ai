@@ -1,0 +1,6 @@
+# Candor AI — Clippy Configuration
+# Lawful Good: enforce strictness without cruelty.
+
+msrv = "1.85"
+disallowed-names = ["foo", "bar", "baz"]
+doc-valid-idents = ["candor", "PDA", "TTS", "STT", "ISA", "MCP", "WASM", "Daemon"]

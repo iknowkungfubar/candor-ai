@@ -147,7 +147,7 @@ LLM-driven software engineering agent with the **Ideal State Artifact** (ISA) â€
 | `candor-orchestrator` | 7-phase agent, ISA climbing, skills | 58 |
 | `candor-tools` | 12 tools: fs, search, shell, test, git | 27 |
 | `candor-mcp` | MCP client, JSON-RPC 2.0, auto-discovery | 8 |
-| `candor-daemon` | CLI + REST API + PDA + Voice | 27 |
+| `candor-ai` | CLI + REST API + PDA + Voice | 27 |
 | `candor-telemetry` | OpenTelemetry tracing | 1 |
 
 **Total**: ~250+ tests, 0 clippy warnings, 0 compiler warnings, 0 CVEs.

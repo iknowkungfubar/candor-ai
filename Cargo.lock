@@ -599,6 +599,36 @@ dependencies = [
 ]
 
 [[package]]
+name = "candor-ai"
+version = "1.0.0"
+dependencies = [
+ "anyhow",
+ "axum",
+ "candor-cognitive",
+ "candor-core",
+ "candor-graph",
+ "candor-memory",
+ "candor-orchestrator",
+ "candor-sandbox",
+ "candor-sentinel",
+ "candor-telemetry",
+ "chrono",
+ "clap",
+ "opentelemetry",
+ "opentelemetry_sdk",
+ "reqwest 0.12.28",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tower 0.5.3",
+ "tower-http",
+ "tracing",
+ "tracing-opentelemetry",
+ "tracing-subscriber",
+ "uuid",
+]
+
+[[package]]
 name = "candor-cognitive"
 version = "1.0.0"
 dependencies = [
@@ -626,36 +656,6 @@ dependencies = [
  "thiserror 2.0.18",
  "tokio",
  "tracing",
- "uuid",
-]
-
-[[package]]
-name = "candor-daemon"
-version = "1.0.0"
-dependencies = [
- "anyhow",
- "axum",
- "candor-cognitive",
- "candor-core",
- "candor-graph",
- "candor-memory",
- "candor-orchestrator",
- "candor-sandbox",
- "candor-sentinel",
- "candor-telemetry",
- "chrono",
- "clap",
- "opentelemetry",
- "opentelemetry_sdk",
- "reqwest 0.12.28",
- "serde",
- "serde_json",
- "tokio",
- "tower 0.5.3",
- "tower-http",
- "tracing",
- "tracing-opentelemetry",
- "tracing-subscriber",
  "uuid",
 ]
 

@@ -5,9 +5,18 @@ edition.workspace = true
 description = "Candor AI CLI and REST API daemon with voice, PDA, and 7-phase agent loop"
 license.workspace = true
 repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+keywords.workspace = true
+categories.workspace = true
 
 [[bin]]
 name = "candor"
+path = "src/main.rs"
+
+# turintech- prefix alias for cross-portfolio naming consistency
+[[bin]]
+name = "turintech-candor-ai"
 path = "src/main.rs"
 
 [dependencies]

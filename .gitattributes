@@ -1,0 +1,48 @@
+# Auto-detect text files and normalize line endings to LF
+* text=auto eol=lf
+
+# Python source
+*.py text diff=python
+*.pyi text diff=python
+
+# Markdown / docs
+*.md text diff=markdown
+*.rst text
+
+# Ruby source
+*.rb text diff=ruby
+
+# Config files
+*.toml text
+*.yaml text
+*.yml text
+*.cfg text
+*.ini text
+*.json text
+
+# Shell scripts
+*.sh text eol=lf
+*.bash text eol=lf
+
+# Git files
+.gitattributes text
+.gitignore text
+
+# Lock / generated files
+*.lock -diff
+
+# Binary / images
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.svg -text diff
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+
+# Editor files
+*.swp binary
+*.swo binary

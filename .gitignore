@@ -38,3 +38,16 @@ desktop/dist/
 
 # Hermes agent artifacts
 .hermes/
+
+# AI agent artifacts (local context — never committed)
+CLAUDE.md
+AGENTS.md
+RULES.md
+SOUL.md
+.cursor/
+.cursorrules
+.windsurfrules
+.opencode/
+.aider*
+COPILOT_INSTRUCTIONS.md
+.claude/

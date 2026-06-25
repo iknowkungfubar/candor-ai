@@ -1,15 +1,20 @@
-/// Configuration module — reads `candor.toml` using Figment.
-///
-/// Sources (earlier sources have lower priority):
-/// 1. `./candor.toml` (project-local)
-/// 2. `~/.candor/config.toml` (user-global)
-/// 3. Environment variables prefixed with `CANDOR_` (highest priority)
-///
-/// Environment variables override TOML values.  The `CANDOR_` prefix is
-/// stripped and the remainder is lowercased to match TOML key names.
-/// Nested keys use `__` as separator, e.g. `CANDOR_SERVER__PORT=9090`.
-use figment::providers::{Env, Format, Toml};
+//! Configuration module — reads `candor.toml` using Figment.
+//!
+//! Sources (earlier sources have lower priority):
+//! 1. `./candor.toml` (project-local)
+//! 2. `~/.candor/config.toml` (user-global)
+//! 3. Environment variables prefixed with `CANDOR_` (highest priority)
+//!
+//! Environment variables override TOML values.  The `CANDOR_` prefix is
+//! stripped and the remainder is lowercased to match TOML key names.
+//! Nested keys use `__` as separator, e.g. `CANDOR_SERVER__PORT=9090`.
+#![allow(
+    dead_code,
+    reason = "Config structs are wired for future use — currently exercised only in tests"
+)]
+
 use figment::Figment;
+use figment::providers::{Env, Format, Toml};
 use serde::Deserialize;
 use std::path::PathBuf;
 
@@ -26,6 +31,7 @@ pub struct CandorConfig {
     pub memory: MemoryConfig,
 }
 
+#[allow(clippy::derivable_impls)]
 impl Default for CandorConfig {
     fn default() -> Self {
         Self {
@@ -160,6 +166,7 @@ fn default_compaction_token_limit() -> usize {
 /// 1. `./candor.toml` (lowest priority)
 /// 2. `~/.candor/config.toml`
 /// 3. Environment variables prefixed with `CANDOR_` (highest priority)
+#[allow(clippy::result_large_err)]
 pub fn load_config() -> Result<CandorConfig, figment::Error> {
     let home_config = std::env::var("HOME")
         .ok()

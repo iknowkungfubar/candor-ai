@@ -5,6 +5,7 @@ use tokio::sync::OnceCell;
 use tracing::{error, info, instrument};
 
 use candor_core::error::CoreError;
+use std::path::PathBuf;
 use surrealdb::Surreal;
 use surrealdb::engine::local::Db;
 #[cfg(not(feature = "persistent"))]
@@ -12,7 +13,6 @@ use surrealdb::engine::local::Mem;
 #[cfg(feature = "persistent")]
 use surrealdb::engine::local::RocksDb;
 use surrealdb::types::{Datetime, SerdeWrapper};
-use std::path::PathBuf;
 
 /// Represents a single discrete unit of memory inside the vector database.
 #[derive(Debug, Clone, Serialize, Deserialize)]

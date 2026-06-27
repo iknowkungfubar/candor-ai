@@ -1,3 +1,4 @@
+use figment::Figment;
 /// Configuration module — reads `candor.toml` using Figment.
 ///
 /// Sources (earlier sources have lower priority):
@@ -9,12 +10,12 @@
 /// stripped and the remainder is lowercased to match TOML key names.
 /// Nested keys use `__` as separator, e.g. `CANDOR_SERVER__PORT=9090`.
 use figment::providers::{Env, Format, Toml};
-use figment::Figment;
 use serde::Deserialize;
 use std::path::PathBuf;
 
 /// Top-level configuration structure mirroring `candor.toml`.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Default, Deserialize)]
+#[allow(dead_code)]
 pub struct CandorConfig {
     #[serde(default)]
     pub server: ServerConfig,
@@ -26,18 +27,8 @@ pub struct CandorConfig {
     pub memory: MemoryConfig,
 }
 
-impl Default for CandorConfig {
-    fn default() -> Self {
-        Self {
-            server: ServerConfig::default(),
-            sandbox: SandboxConfig::default(),
-            inference: InferenceConfig::default(),
-            memory: MemoryConfig::default(),
-        }
-    }
-}
-
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Default, Deserialize)]
+#[allow(dead_code)]
 pub struct ServerConfig {
     #[serde(default = "default_host")]
     pub host: String,
@@ -49,18 +40,8 @@ pub struct ServerConfig {
     pub max_iterations: u32,
 }
 
-impl Default for ServerConfig {
-    fn default() -> Self {
-        Self {
-            host: default_host(),
-            port: default_port(),
-            checkpoint_dir: default_checkpoint_dir(),
-            max_iterations: default_max_iterations(),
-        }
-    }
-}
-
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Default, Deserialize)]
+#[allow(dead_code)]
 pub struct SandboxConfig {
     #[serde(default = "default_scratchpad_dir")]
     pub scratchpad_dir: String,
@@ -70,17 +51,8 @@ pub struct SandboxConfig {
     pub default_memory_mb: u64,
 }
 
-impl Default for SandboxConfig {
-    fn default() -> Self {
-        Self {
-            scratchpad_dir: default_scratchpad_dir(),
-            default_timeout_secs: default_timeout_secs(),
-            default_memory_mb: default_memory_mb(),
-        }
-    }
-}
-
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Default, Deserialize)]
+#[allow(dead_code)]
 pub struct InferenceConfig {
     pub anthropic_api_key: Option<String>,
     pub openai_api_key: Option<String>,
@@ -90,18 +62,8 @@ pub struct InferenceConfig {
     pub embedding_dim: usize,
 }
 
-impl Default for InferenceConfig {
-    fn default() -> Self {
-        Self {
-            anthropic_api_key: None,
-            openai_api_key: None,
-            embedding_model: default_embedding_model(),
-            embedding_dim: default_embedding_dim(),
-        }
-    }
-}
-
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Default, Deserialize)]
+#[allow(dead_code)]
 pub struct MemoryConfig {
     #[serde(default = "default_backend")]
     pub backend: String,
@@ -109,47 +71,49 @@ pub struct MemoryConfig {
     pub compaction_token_limit: usize,
 }
 
-impl Default for MemoryConfig {
-    fn default() -> Self {
-        Self {
-            backend: default_backend(),
-            compaction_token_limit: default_compaction_token_limit(),
-        }
-    }
-}
-
 // ── Default helpers ──
 
+#[allow(dead_code)]
 fn default_host() -> String {
     "127.0.0.1".into()
 }
+#[allow(dead_code)]
 fn default_port() -> u16 {
     31337
 }
+#[allow(dead_code)]
 fn default_checkpoint_dir() -> String {
     "/tmp/candor-checkpoints".into()
 }
+#[allow(dead_code)]
 fn default_max_iterations() -> u32 {
     100
 }
+#[allow(dead_code)]
 fn default_scratchpad_dir() -> String {
     "/tmp/agent_scratchpad".into()
 }
+#[allow(dead_code)]
 fn default_timeout_secs() -> u64 {
     15
 }
+#[allow(dead_code)]
 fn default_memory_mb() -> u64 {
     256
 }
+#[allow(dead_code)]
 fn default_embedding_model() -> String {
     "all-MiniLM-L6-v2".into()
 }
+#[allow(dead_code)]
 fn default_embedding_dim() -> usize {
     384
 }
+#[allow(dead_code)]
 fn default_backend() -> String {
     "mem".into()
 }
+#[allow(dead_code)]
 fn default_compaction_token_limit() -> usize {
     135_000
 }
@@ -160,6 +124,7 @@ fn default_compaction_token_limit() -> usize {
 /// 1. `./candor.toml` (lowest priority)
 /// 2. `~/.candor/config.toml`
 /// 3. Environment variables prefixed with `CANDOR_` (highest priority)
+#[allow(dead_code, clippy::result_large_err)]
 pub fn load_config() -> Result<CandorConfig, figment::Error> {
     let home_config = std::env::var("HOME")
         .ok()

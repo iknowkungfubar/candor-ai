@@ -51,3 +51,19 @@ SOUL.md
 .aider*
 COPILOT_INSTRUCTIONS.md
 .claude/
+
+# AI Agent Artifacts (SECRETS)
+AGENTS.md
+CLAUDE.md
+CLAUDE_CODE.md
+.cursorrules
+.cursor/**
+.windsurfrules
+CONTEXT.md
+MEMORY.md
+ai-instructions.md
+ai-context.md
+.github/copilot-instructions.md
+.hermes/
+SKILL.md
+*.hermes-profile

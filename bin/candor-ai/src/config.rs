@@ -1,3 +1,7 @@
+#![expect(dead_code)]
+#![allow(clippy::derivable_impls)]
+
+use figment::Figment;
 /// Configuration module — reads `candor.toml` using Figment.
 ///
 /// Sources (earlier sources have lower priority):
@@ -9,7 +13,6 @@
 /// stripped and the remainder is lowercased to match TOML key names.
 /// Nested keys use `__` as separator, e.g. `CANDOR_SERVER__PORT=9090`.
 use figment::providers::{Env, Format, Toml};
-use figment::Figment;
 use serde::Deserialize;
 use std::path::PathBuf;
 
@@ -160,6 +163,7 @@ fn default_compaction_token_limit() -> usize {
 /// 1. `./candor.toml` (lowest priority)
 /// 2. `~/.candor/config.toml`
 /// 3. Environment variables prefixed with `CANDOR_` (highest priority)
+#[allow(clippy::result_large_err)]
 pub fn load_config() -> Result<CandorConfig, figment::Error> {
     let home_config = std::env::var("HOME")
         .ok()

@@ -1,3 +1,4 @@
+use figment::Figment;
 /// Configuration module — reads `candor.toml` using Figment.
 ///
 /// Sources (earlier sources have lower priority):
@@ -9,7 +10,6 @@
 /// stripped and the remainder is lowercased to match TOML key names.
 /// Nested keys use `__` as separator, e.g. `CANDOR_SERVER__PORT=9090`.
 use figment::providers::{Env, Format, Toml};
-use figment::Figment;
 use serde::Deserialize;
 use std::path::PathBuf;
 

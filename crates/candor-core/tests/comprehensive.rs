@@ -152,10 +152,12 @@ fn test_state_log_multiple_events() {
 
 #[test]
 fn test_state_serialization_roundtrip() {
-    let mut s = AgentState::default();
-    s.active_task = "test task".into();
-    s.iteration_count = 42;
-    s.project_id = Some("proj-1".into());
+    let mut s = AgentState {
+        active_task: "test task".into(),
+        iteration_count: 42,
+        project_id: Some("proj-1".into()),
+        ..Default::default()
+    };
     s.log_event("hello");
 
     let json = serde_json::to_string(&s).unwrap();

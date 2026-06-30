@@ -73,7 +73,7 @@ chrono = { version = "0.4", features = ["serde"] }
 uuid = { version = "1", features = ["v4", "serde"] }
 
 # Sandbox / WASM
-wasmtime = { version = ">=36.0.8", features = ["async"] }
+wasmtime = { version = ">=36.0.7", features = ["async"] }
 cap-std = "4"
 
 # Transitive dependency pins (dependabot security)
@@ -90,7 +90,7 @@ tower-http = { version = "0.7", features = ["cors", "trace"] }
 clap = { version = "4", features = ["derive", "env"] }
 
 # Database
-surrealdb = { version = "3", features = ["kv-mem"] }
+surrealdb = { version = "3.1.5", features = ["kv-mem"] }
 
 # Local inference
 mistralrs = { version = "0.7" }

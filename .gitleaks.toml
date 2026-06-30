@@ -1,0 +1,37 @@
+# Gitleaks configuration for Candor AI
+# This config extends the default rule set with allowlists for known
+# false positives in test data and example configuration files.
+
+useDefault = true
+
+[allowlist]
+description = "Global allowlist for test artifacts, example configs, and documentation"
+
+# Test files — unit tests often contain fake tokens/secrets for coverage
+paths = [
+    # Allow all Rust test files (both inline #[cfg(test)] mod tests and integration tests)
+    "(?i).*test.*\\.rs$",
+    "(?i).*/tests/.*\\.rs$",
+    # Allow test fixture/data files
+    "(?i).*test.*data.*",
+    "(?i).*fixture.*",
+    "(?i).*mock.*",
+    # Allow documentation files
+    "README.md$",
+    "AGENTS.md$",
+    # Allow main.rs which has example config strings
+    "main.rs",
+]
+
+# Known false positive patterns in the codebase
+regexes = [
+    # Example config string in main.rs that contains commented-out API key placeholders
+    # e.g. # anthropic_api_key = "sk-ant-..."
+    "(?i)#\\s*(anthropic|openai|deepseek|gemini)_api_key\\s*=",
+    # Hash/checksum strings that look like tokens
+    "(?i)[0-9a-f]{40}",
+    # Commented-out example config values
+    "(?i)/{2,}\\s*(api|token|key|secret)\\s*=",
+    # Placeholder tokens in documentation
+    "(?i)(sk|pk|ghp|gho|ghu|ghs)_[a-z0-9]+",
+]

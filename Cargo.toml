@@ -93,7 +93,7 @@ clap = { version = "4", features = ["derive", "env"] }
 surrealdb = { version = "3", features = ["kv-mem"] }
 
 # Local inference
-mistralrs = { version = "0.7" }
+mistralrs = { version = "0.8" }
 
 # Configuration
 figment = { version = "0.10", features = ["toml", "env"] }

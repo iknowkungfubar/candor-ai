@@ -961,7 +961,7 @@ dependencies = [
  "chrono",
  "clap",
  "figment",
- "opentelemetry 0.29.1",
+ "opentelemetry 0.32.0",
  "opentelemetry_sdk 0.32.1",
  "reqwest 0.12.28",
  "serde",
@@ -1121,7 +1121,7 @@ dependencies = [
 name = "candor-telemetry"
 version = "1.0.0"
 dependencies = [
- "opentelemetry 0.29.1",
+ "opentelemetry 0.32.0",
  "opentelemetry-otlp",
  "opentelemetry_sdk 0.32.1",
  "tokio",

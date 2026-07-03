@@ -98,7 +98,7 @@ pub struct TelemetryGuard {
 impl Drop for TelemetryGuard {
     fn drop(&mut self) {
         if let Some(provider) = self.provider.take() {
-            tracing_opentelemetry::OpenTelemetrySpanExt::set_parent(
+            let _ = tracing_opentelemetry::OpenTelemetrySpanExt::set_parent(
                 &tracing::Span::current(),
                 opentelemetry::Context::new(),
             );

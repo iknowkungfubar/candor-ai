@@ -5,6 +5,8 @@ use tokio::sync::OnceCell;
 use tracing::{error, info, instrument};
 
 use candor_core::error::CoreError;
+#[cfg(feature = "persistent")]
+use std::path::PathBuf;
 use surrealdb::Surreal;
 use surrealdb::engine::local::Db;
 #[cfg(not(feature = "persistent"))]
@@ -12,7 +14,6 @@ use surrealdb::engine::local::Mem;
 #[cfg(feature = "persistent")]
 use surrealdb::engine::local::RocksDb;
 use surrealdb::types::{Datetime, SerdeWrapper};
-use std::path::PathBuf;
 
 /// Represents a single discrete unit of memory inside the vector database.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -350,6 +351,7 @@ pub struct ExecutionLogEntry {
 }
 
 /// Resolve the PDA home directory (~/.candor) or fall back to /tmp.
+#[cfg(feature = "persistent")]
 fn dirs_or_default() -> PathBuf {
     if let Ok(home) = std::env::var("HOME") {
         PathBuf::from(home).join(".candor")

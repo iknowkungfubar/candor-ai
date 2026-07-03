@@ -1,3 +1,4 @@
+use figment::Figment;
 /// Configuration module — reads `candor.toml` using Figment.
 ///
 /// Sources (earlier sources have lower priority):
@@ -9,12 +10,11 @@
 /// stripped and the remainder is lowercased to match TOML key names.
 /// Nested keys use `__` as separator, e.g. `CANDOR_SERVER__PORT=9090`.
 use figment::providers::{Env, Format, Toml};
-use figment::Figment;
 use serde::Deserialize;
 use std::path::PathBuf;
 
 /// Top-level configuration structure mirroring `candor.toml`.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Default)]
 pub struct CandorConfig {
     #[serde(default)]
     pub server: ServerConfig,
@@ -24,17 +24,6 @@ pub struct CandorConfig {
     pub inference: InferenceConfig,
     #[serde(default)]
     pub memory: MemoryConfig,
-}
-
-impl Default for CandorConfig {
-    fn default() -> Self {
-        Self {
-            server: ServerConfig::default(),
-            sandbox: SandboxConfig::default(),
-            inference: InferenceConfig::default(),
-            memory: MemoryConfig::default(),
-        }
-    }
 }
 
 #[derive(Debug, Clone, Deserialize)]

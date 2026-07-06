@@ -109,36 +109,47 @@ impl Default for MemoryConfig {
 
 // ── Default helpers ──
 
+#[allow(dead_code)]
 fn default_host() -> String {
     "127.0.0.1".into()
 }
+#[allow(dead_code)]
 fn default_port() -> u16 {
     31337
 }
+#[allow(dead_code)]
 fn default_checkpoint_dir() -> String {
     "/tmp/candor-checkpoints".into()
 }
+#[allow(dead_code)]
 fn default_max_iterations() -> u32 {
     100
 }
+#[allow(dead_code)]
 fn default_scratchpad_dir() -> String {
     "/tmp/agent_scratchpad".into()
 }
+#[allow(dead_code)]
 fn default_timeout_secs() -> u64 {
     15
 }
+#[allow(dead_code)]
 fn default_memory_mb() -> u64 {
     256
 }
+#[allow(dead_code)]
 fn default_embedding_model() -> String {
     "all-MiniLM-L6-v2".into()
 }
+#[allow(dead_code)]
 fn default_embedding_dim() -> usize {
     384
 }
+#[allow(dead_code)]
 fn default_backend() -> String {
     "mem".into()
 }
+#[allow(dead_code)]
 fn default_compaction_token_limit() -> usize {
     135_000
 }
@@ -149,6 +160,7 @@ fn default_compaction_token_limit() -> usize {
 /// 1. `./candor.toml` (lowest priority)
 /// 2. `~/.candor/config.toml`
 /// 3. Environment variables prefixed with `CANDOR_` (highest priority)
+#[allow(dead_code)]
 pub fn load_config() -> Result<CandorConfig, figment::Error> {
     let home_config = std::env::var("HOME")
         .ok()

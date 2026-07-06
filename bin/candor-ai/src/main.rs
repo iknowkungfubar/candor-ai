@@ -1,4 +1,3 @@
-#![allow(dead_code, clippy::result_large_err)]
 /// Candor AI — Lawful Good, Rust-native Agentic Operating System.
 ///
 /// A production-grade agent harness implementing Algorithm v6.3.0.

@@ -15,6 +15,7 @@ pub mod isa_parser;
 pub mod markdown_router;
 pub mod memory_nudge;
 pub mod phases;
+pub mod pipeline;
 pub mod skills;
 pub mod trajectory;
 

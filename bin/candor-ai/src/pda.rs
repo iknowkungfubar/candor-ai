@@ -625,7 +625,7 @@ mod tests {
             write_learning("git-test", "auto-commit").await.unwrap();
             let out = std::process::Command::new("git")
                 .args(["log", "--oneline"])
-                .current_dir(&tmp.join(".candor"))
+                .current_dir(tmp.join(".candor"))
                 .output()
                 .unwrap();
             let log = String::from_utf8_lossy(&out.stdout);

@@ -526,14 +526,14 @@ mod tests {
     #[test]
     fn test_extract_time_format() {
         let msg = "[2026-05-30T12:34:56+00:00] Task complete";
-        let t = extract_time(&msg);
+        let t = extract_time(msg);
         assert_eq!(t, "12:34:56");
     }
 
     #[test]
     fn test_extract_time_no_brackets() {
         let msg = "raw message";
-        let t = extract_time(&msg);
+        let t = extract_time(msg);
         assert_eq!(t, "--:--:--");
     }
 

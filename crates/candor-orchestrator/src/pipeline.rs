@@ -58,6 +58,7 @@ impl AgentPipeline {
         Self { phases }
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn run(
         &self,
         task: &str,

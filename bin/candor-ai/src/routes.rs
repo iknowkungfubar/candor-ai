@@ -186,3 +186,121 @@ pub async fn metrics(State(state): State<AppState>) -> impl IntoResponse {
         memory_blocks: 0,
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_health_response_serialization() {
+        let resp = HealthResponse {
+            status: "ok".into(),
+            version: "1.0.0".into(),
+            subsystems: SubsystemHealth {
+                graph: "ok".into(),
+                sandbox: "bubblewrap".into(),
+                memory: "384d".into(),
+                sentinel: "active".into(),
+                cognitive: "connected".into(),
+            },
+        };
+        let json = serde_json::to_value(&resp).unwrap();
+        assert_eq!(json["status"], "ok");
+        assert_eq!(json["version"], "1.0.0");
+        assert_eq!(json["subsystems"]["graph"], "ok");
+        assert_eq!(json["subsystems"]["sandbox"], "bubblewrap");
+        assert_eq!(json["subsystems"]["memory"], "384d");
+        assert_eq!(json["subsystems"]["sentinel"], "active");
+        assert_eq!(json["subsystems"]["cognitive"], "connected");
+        // Ensure no extra fields were added
+        let obj = json.as_object().unwrap();
+        assert_eq!(obj.len(), 3, "HealthResponse should have exactly 3 fields");
+    }
+
+    #[test]
+    fn test_status_response_serialization() {
+        let resp = StatusResponse {
+            session_id: "test-session-123".into(),
+            current_phase: Some("Observe".into()),
+            iteration_count: 5,
+            task_count: 42,
+            memory_blocks: 128,
+            features: vec!["7-phase-algorithm".into(), "wasm-sandbox".into()],
+        };
+        let json = serde_json::to_value(&resp).unwrap();
+        assert_eq!(json["session_id"], "test-session-123");
+        assert_eq!(json["current_phase"], "Observe");
+        assert_eq!(json["iteration_count"], 5);
+        assert_eq!(json["task_count"], 42);
+        assert_eq!(json["memory_blocks"], 128);
+        assert_eq!(json["features"][0], "7-phase-algorithm");
+        assert_eq!(json["features"][1], "wasm-sandbox");
+    }
+
+    #[test]
+    fn test_status_response_null_phase() {
+        let resp = StatusResponse {
+            session_id: "sess".into(),
+            current_phase: None,
+            iteration_count: 0,
+            task_count: 0,
+            memory_blocks: 0,
+            features: vec![],
+        };
+        let json = serde_json::to_value(&resp).unwrap();
+        assert_eq!(json["current_phase"], serde_json::Value::Null);
+    }
+
+    #[test]
+    fn test_task_request_deserialization_with_isa() {
+        let input = r#"{"description": "Build a test", "isa_id": "my-isa"}"#;
+        let req: TaskRequest = serde_json::from_str(input).unwrap();
+        assert_eq!(req.description, "Build a test");
+        assert_eq!(req.isa_id, Some("my-isa".into()));
+    }
+
+    #[test]
+    fn test_task_request_deserialization_without_isa() {
+        let input = r#"{"description": "Just a task"}"#;
+        let req: TaskRequest = serde_json::from_str(input).unwrap();
+        assert_eq!(req.description, "Just a task");
+        assert_eq!(req.isa_id, None);
+    }
+
+    #[test]
+    fn test_task_response_serialization() {
+        let resp = TaskResponse {
+            session_id: "sess-1".into(),
+            status: "completed".into(),
+        };
+        let json = serde_json::to_value(&resp).unwrap();
+        assert_eq!(json["session_id"], "sess-1");
+        assert_eq!(json["status"], "completed");
+        assert_eq!(json.as_object().unwrap().len(), 2);
+    }
+
+    #[test]
+    fn test_task_response_failed_status() {
+        let resp = TaskResponse {
+            session_id: "sess-2".into(),
+            status: "failed: timeout".into(),
+        };
+        let json = serde_json::to_value(&resp).unwrap();
+        assert_eq!(json["status"], "failed: timeout");
+    }
+
+    #[test]
+    fn test_metrics_response_serialization() {
+        let resp = MetricsResponse {
+            uptime_seconds: 3600,
+            sessions_completed: 99,
+            sandbox_executions: 42,
+            memory_blocks: 256,
+        };
+        let json = serde_json::to_value(&resp).unwrap();
+        assert_eq!(json["uptime_seconds"], 3600);
+        assert_eq!(json["sessions_completed"], 99);
+        assert_eq!(json["sandbox_executions"], 42);
+        assert_eq!(json["memory_blocks"], 256);
+    }
+}

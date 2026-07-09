@@ -7,8 +7,8 @@ use candor_core::error::CoreError;
 use candor_core::state::AgentState;
 use candor_tools::registry::ToolContext;
 
-use super::writer::write_code_files;
 use super::PhaseContext;
+use super::writer::write_code_files;
 
 impl PhaseContext {
     pub(super) async fn observe(&self, ctx: &ToolContext, state: Arc<Mutex<AgentState>>) -> Result<(), CoreError> {
@@ -233,10 +233,12 @@ impl PhaseContext {
         }
 
         // ── Phase 3: Check for required human confirmation criteria ──
-        let has_human_criteria = isa
-            .acceptance_criteria
-            .iter()
-            .any(|c| matches!(c.verification_method, candor_core::ideal::VerificationMethod::HumanConfirmation { .. }));
+        let has_human_criteria = isa.acceptance_criteria.iter().any(|c| {
+            matches!(
+                c.verification_method,
+                candor_core::ideal::VerificationMethod::HumanConfirmation { .. }
+            )
+        });
 
         if has_human_criteria {
             summary.push_str("\n[!] Human confirmation required for some criteria.\n");

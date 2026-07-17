@@ -4,7 +4,7 @@
 
 [![Crates.io](https://img.shields.io/crates/v/candor-ai.svg)](https://crates.io/crates/candor-ai)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![CI](https://github.com/TurinTech-Solutions/candor-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/TurinTech-Solutions/candor-ai/actions/workflows/ci.yml)
+[![CI](https://github.com/iknowkungfubar/candor-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/iknowkungfubar/candor-ai/actions/workflows/ci.yml)
 
 # Candor AI — Lawful Good Rust Agentic Operating System
 
@@ -39,7 +39,7 @@ candor serve --port 31337           # REST API daemon
 cargo install candor-ai
 
 # Via install script (auto-downloads pre-built binary)
-curl -sfL https://raw.githubusercontent.com/TurinTech-Solutions/candor-ai/main/install.sh | sh
+curl -sfL https://raw.githubusercontent.com/iknowkungfubar/candor-ai/main/install.sh | sh
 
 # Verify
 candor doctor
@@ -242,7 +242,7 @@ export CANDOR_TTS_VOICE="en-us"
 ## Development
 
 ```bash
-git clone https://github.com/TurinTech-Solutions/candor-ai
+git clone https://github.com/iknowkungfubar/candor-ai
 cd candor-ai
 
 # Dependencies for voice features (optional)

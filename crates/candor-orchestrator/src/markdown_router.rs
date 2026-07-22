@@ -278,11 +278,8 @@ fn extract_list_item(trimmed: &str) -> Option<String> {
 
     // Handle checkbox format: [ ] or [x]
     let without_checkbox = if cleaned.starts_with('[') {
-        if let Some(end) = cleaned.find(']') {
-            cleaned[end + 1..].trim()
-        } else {
-            return None;
-        }
+        let end = cleaned.find(']')?;
+        cleaned[end + 1..].trim()
     } else {
         cleaned
     };

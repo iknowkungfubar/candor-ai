@@ -30,8 +30,8 @@ use candor_memory::store::MemorySystem;
 use candor_orchestrator::OrchestratorEngine;
 
 use clap::Parser;
-use cli::{auth_middleware, AppState, Cli, Commands, PdaAction};
-use display::{BOLD, CYAN, GREEN, YELLOW, RED, RESET};
+use cli::{AppState, Cli, Commands, PdaAction, auth_middleware};
+use display::{BOLD, CYAN, GREEN, RED, RESET, YELLOW};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {

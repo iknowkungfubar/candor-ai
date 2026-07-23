@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use candor_orchestrator::OrchestratorEngine;
 
-use crate::display::{GREEN, YELLOW, BOLD, RESET};
+use crate::display::{BOLD, GREEN, RESET, YELLOW};
 
 /// Check all subsystems and print health report.
 pub async fn run_health_check(orch: Arc<tokio::sync::Mutex<OrchestratorEngine>>) {

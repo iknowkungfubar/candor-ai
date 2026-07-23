@@ -1,4 +1,4 @@
-use crate::display::{GREEN, BOLD, RESET};
+use crate::display::{BOLD, GREEN, RESET};
 
 const CANDOR_TOML_CONTENT: &str = r#"[server]
 host = "127.0.0.1"

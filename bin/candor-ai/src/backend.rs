@@ -1,11 +1,8 @@
 use std::sync::Arc;
 
-use candor_cognitive::{
-    AnthropicBackend, CognitiveEngine, DeepSeekBackend,
-    GeminiBackend, MockBackend, OpenAiBackend,
-};
+use candor_cognitive::{AnthropicBackend, CognitiveEngine, DeepSeekBackend, GeminiBackend, MockBackend, OpenAiBackend};
 
-use crate::display::{GREEN, BOLD, YELLOW, RESET};
+use crate::display::{BOLD, GREEN, RESET, YELLOW};
 
 /// Build the cognitive engine by probing environment variables for API keys.
 /// Tries in order: Anthropic, DeepSeek, Gemini, OpenAI, LM Studio, Ollama.

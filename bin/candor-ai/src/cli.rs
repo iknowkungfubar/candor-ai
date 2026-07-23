@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
-use axum::response::IntoResponse;
 use axum::middleware;
+use axum::response::IntoResponse;
 use clap::{Parser, Subcommand};
 
 use candor_orchestrator::OrchestratorEngine;
@@ -64,9 +64,7 @@ pub enum Commands {
         max_turns: u32,
     },
     /// Bootstrap a new candor project
-    Init {
-        path: String,
-    },
+    Init { path: String },
     /// Check all subsystems
     Health,
     /// Start REST API daemon

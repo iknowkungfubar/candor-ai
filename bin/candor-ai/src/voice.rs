@@ -5,15 +5,12 @@ use candor_memory::store::MemorySystem;
 use candor_orchestrator::OrchestratorEngine;
 
 use crate::backend;
-use crate::display::{CYAN, GREEN, YELLOW, RED, BOLD, RESET};
+use crate::display::{BOLD, CYAN, GREEN, RED, RESET, YELLOW};
 use crate::stt;
 use crate::tts;
 
 /// Execute a one-shot voice task: transcribe, then run as a CLI task.
-pub async fn run_voice_task(
-    prompt: Option<String>,
-    _duration: u64,
-) -> Result<(), Box<dyn std::error::Error>> {
+pub async fn run_voice_task(prompt: Option<String>, _duration: u64) -> Result<(), Box<dyn std::error::Error>> {
     let text = stt::transcribe_mic()
         .await
         .map_err(|e| Box::new(std::io::Error::other(format!("Voice error: {e}"))))?;

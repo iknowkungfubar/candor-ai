@@ -1,9 +1,10 @@
 ---
-name: Bug report
+name: Bug Report
 about: Create a report to help us improve
-title: ''
+title: "[BUG] "
 labels: bug
 assignees: ''
+
 ---
 
 **Describe the bug**
@@ -19,9 +20,9 @@ Steps to reproduce the behavior:
 A clear and concise description of what you expected to happen.
 
 **Environment (please complete):**
-- OS: [e.g. Ubuntu 24.04, macOS 15, Windows 11]
-- Python/Rust version: [e.g. Python 3.13, Rust 1.85]
-- Version/commit: [e.g. v1.0.0, commit abc123]
+- OS: [e.g. Linux, macOS, Windows]
+- Python version: [e.g. 3.11, 3.12]
+- Package version: [e.g. 1.0.0]
 
 **Additional context**
-Add any other context about the problem here. Error logs, screenshots, etc.
+Add any other context about the problem here.

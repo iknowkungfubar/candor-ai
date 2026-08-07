@@ -10,4 +10,3 @@ ignore = [
     "RUSTSEC-2023-0071",  # rsa 0.9.10 — Marvin Attack (transitive via surrealdb-core -> jsonwebtoken, no fix available)
     "RUSTSEC-2026-0235",  # rkyv 0.7.46 — OOB read via Rc/Arc archives (pinned ^0.7 by surrealdb -> rust_decimal; feature-unactivated, no build-graph path)
 ]
-

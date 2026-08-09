@@ -118,7 +118,7 @@ LLM-driven software engineering agent with the **Ideal State Artifact** (ISA) �
 - **WASM sandbox** (wasmtime) + **bubblewrap** process isolation
 - **Sentinel guardrails**: 6 deterministic rules, 10 doctrine principles
 - **Force-push blocked**, secrets never logged, deny-by-default posture
-- **17 security advisories fixed** (wasmtime 30→36)
+- **17 security advisories fixed** (wasmtime 30→36; lock now at 47.0.3)
 - **Zero CVEs** — automated cargo audit in CI
 
 ### 🔧 Tools (12 built-in)

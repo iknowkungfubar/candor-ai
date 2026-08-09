@@ -9,6 +9,7 @@
 - release.yml: publish step now uses `CARGO_REGISTRY_TOKEN` secret
 - README: version badge replaced with dynamic crates.io badge
 - Verified: `candor --version` returns `candor 1.0.0`
+- cargo audit: RUSTSEC-2026-0235 (rkyv 0.7.46, unreachable transitive pin) documented as ignored in `.cargo/audit.toml`
 
 ## [1.0.0] — 2026-05-29
 

@@ -276,9 +276,14 @@ impl ProcessBackend {
     ///   - **Linux only**: Calls `unshare(CLONE_NEWNS | CLONE_NEWPID | CLONE_NEWNET)` to
     ///     create private mount, PID, and network namespaces. This prevents the child process
     ///     from mounting filesystems, seeing host processes (`/proc`), or opening network sockets.
-    ///   - **All Unix**: Sets `setrlimit` for `RLIMIT_NPROC` (max child processes),
-    ///     `RLIMIT_NOFILE` (max open file descriptors), and `RLIMIT_FSIZE` (max file size
-    ///     written) to cap resource exhaustion.
+    ///   - **All Unix**: Sets `setrlimit` for `RLIMIT_NOFILE` (max open file descriptors)
+    ///     and `RLIMIT_FSIZE` (max file size written) to cap resource exhaustion.
+    ///
+    ///     `RLIMIT_NPROC` is deliberately NOT set: it caps the total process/thread
+    ///     count of the whole real user ID, not of this process tree, so lowering it
+    ///     on a busy shared user (e.g. a CI runner) makes any nested `fork()` fail
+    ///     with EAGAIN ("Cannot fork") — and it provides no real isolation anyway,
+    ///     since a sandboxed fork bomb shares the user's quota regardless.
     ///   - **All Unix**: Calls `setpgid(0, 0)` to make the child a process-group leader,
     ///     enabling the caller to kill the entire process tree (`killpg`) on timeout.
     ///
@@ -368,14 +373,11 @@ impl ProcessBackend {
 /// Called inside `pre_exec` before `execve()`. These limits constrain
 /// resource exhaustion from sandboxed child processes.
 fn set_child_rlimits() -> std::io::Result<()> {
-    // Cap child processes to prevent fork bombs.
-    let nproc = libc::rlimit {
-        rlim_cur: 64,
-        rlim_max: 64,
-    };
-    if unsafe { libc::setrlimit(libc::RLIMIT_NPROC, &nproc) } == -1 {
-        return Err(std::io::Error::last_os_error());
-    }
+    // Note: RLIMIT_NPROC is intentionally not set here. It is a per-user-ID cap on
+    // the total process/thread count rather than a per-process-tree cap: applying
+    // it in a shared user environment (e.g. CI) breaks legitimate nested forks with
+    // EAGAIN as soon as the user already owns many processes. Per-tree process-count
+    // containment belongs to a cgroup pids controller, not an rlimit.
 
     // Cap open file descriptors to prevent fd exhaustion.
     let nofile = libc::rlimit {

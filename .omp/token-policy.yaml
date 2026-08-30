@@ -1,0 +1,64 @@
+version: 1
+
+mode: safe
+
+tool_output:
+  passthrough_bytes: 8192
+  structured_reduce_bytes: 32768
+  externalize_bytes: 32768
+  preserve_raw: true
+  fail_open: true
+
+  reducers:
+    tests: true
+    compiler: true
+    lint: true
+    git: true
+    package_manager: true
+    generic: false
+
+artifacts:
+  enabled: true
+  root: ".token-policy"
+  retention_days: 30
+  max_total_mb: 2048
+  hash: "sha256"
+  permissions: "private"
+
+retrieval:
+  lexical: true
+  fts: true
+  semantic: false
+  max_initial_results: 5
+
+ledger:
+  enabled: true
+  inject_every_turn: false
+
+compaction:
+  use_harness_native: true
+  replace_native_compaction: false
+
+reasoning:
+  auto_reduce: false
+
+model_routing:
+  enabled: false
+
+lossy_compression:
+  enabled: false
+
+privacy:
+  local_only: true
+  redact_secrets: true
+  store_absolute_paths: false
+  store_full_commands: false
+  store_provider_session_ids: false
+  store_environment_values: false
+  allow_remote_telemetry: false
+
+telemetry:
+  enabled: true
+  store_prompt_content: false
+  store_model_response_content: false
+  store_tool_content: false

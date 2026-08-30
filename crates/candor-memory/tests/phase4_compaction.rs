@@ -97,8 +97,10 @@ fn test_embedding_empty_input() {
 
 #[test]
 fn test_token_limit_breached() {
-    let mut state = AgentState::default();
-    state.estimated_token_count = 135_000;
+    let mut state = AgentState {
+        estimated_token_count: 135_000,
+        ..Default::default()
+    };
     assert!(state.is_over_token_limit());
 
     state.estimated_token_count = 100_000;

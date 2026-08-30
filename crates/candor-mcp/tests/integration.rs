@@ -58,12 +58,11 @@ fn test_parse_transport_multiple() {
 #[test]
 fn test_http_transport_construction() {
     let _transport = candor_mcp::transport::HttpTransport::new("http://localhost:3000".into());
-    // Just verify it doesn't panic
-    assert!(true);
+    // Construction itself verifies the transport can be initialized.
 }
 
 #[test]
 fn test_stdio_transport_construction() {
     let _transport = candor_mcp::transport::StdioTransport::new("echo".into(), vec!["test".into()]);
-    assert!(true);
+    // Construction itself verifies the transport can be initialized.
 }

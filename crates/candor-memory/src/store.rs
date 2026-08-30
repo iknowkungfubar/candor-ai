@@ -55,11 +55,11 @@ impl MemorySystem {
                 .map_err(|e| CoreError::Internal(format!("SurrealDB ns/db error: {e}")))?;
 
             info!("SurrealDB persistent engine ready (lazy schema)");
-            return Ok(Self {
+            Ok(Self {
                 db,
                 embedding_dim,
                 schema_init: OnceCell::new(),
-            });
+            })
         }
 
         #[cfg(not(feature = "persistent"))]

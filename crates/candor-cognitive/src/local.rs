@@ -23,19 +23,23 @@ impl HardwareBackend {
     pub fn detect() -> Self {
         // Check for CUDA
         if std::env::var("CUDA_VISIBLE_DEVICES").is_ok() {
-            return HardwareBackend::Cuda;
+            HardwareBackend::Cuda
+        } else {
+            // Check for Metal (macOS)
+            #[cfg(target_os = "macos")]
+            {
+                HardwareBackend::Metal
+            }
+            // Check for Vulkan (enabled via --features vulkan)
+            #[cfg(all(not(target_os = "macos"), feature = "vulkan"))]
+            {
+                HardwareBackend::Vulkan
+            }
+            #[cfg(all(not(target_os = "macos"), not(feature = "vulkan")))]
+            {
+                HardwareBackend::Cpu
+            }
         }
-        // Check for Metal (macOS)
-        #[cfg(target_os = "macos")]
-        {
-            return HardwareBackend::Metal;
-        }
-        // Check for Vulkan (enabled via --features vulkan)
-        #[cfg(feature = "vulkan")]
-        {
-            return HardwareBackend::Vulkan;
-        }
-        HardwareBackend::Cpu
     }
 
     pub fn name(&self) -> &str {

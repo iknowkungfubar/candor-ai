@@ -62,10 +62,12 @@ fn test_agent_state_append_message() {
 
 #[test]
 fn test_agent_state_token_limit() {
-    let mut state = AgentState::default();
     // Each message is ~100 chars, needs ~540 to hit 135K tokens (with ~4 chars/token → 33,750 messages)
     // Use append_message which adds len/4 to token count
-    state.estimated_token_count = 135_000;
+    let mut state = AgentState {
+        estimated_token_count: 135_000,
+        ..Default::default()
+    };
     assert!(state.is_over_token_limit());
 
     state.estimated_token_count = 100_000;

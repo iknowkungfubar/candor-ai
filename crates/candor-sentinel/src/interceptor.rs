@@ -189,8 +189,6 @@ mod tests {
         // Sentinel construction doesn't require a live model.
         // The permissive mode accepts all scopes.
 
-        // This test validates the structural integrity
-        // of the SentinelInterceptor type.
-        assert!(true); // SentinelInterceptor compiles correctly.
+        // This test validates the structural integrity of the SentinelInterceptor type.
     }
 }

@@ -7,8 +7,8 @@ use candor_cognitive::{CognitiveEngine, LlmBackend};
 fn test_phase1_cognitive_engine_new_with_mock() {
     let rt = tokio::runtime::Runtime::new().unwrap();
     let engine = rt.block_on(async { CognitiveEngine::new(None, None).await.unwrap() });
-    assert!(engine.is_frontier_healthy() || engine.is_local_healthy() || true);
-    // Note: With no backends, both are false. The engine still initializes correctly.
+    assert!(!engine.is_frontier_healthy() && !engine.is_local_healthy());
+    // With no backends, both are false. The engine still initializes correctly.
 }
 
 #[test]

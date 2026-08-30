@@ -2,7 +2,8 @@
 ///
 /// These benchmarks serve as a performance regression detection suite.
 /// They run via `cargo bench --package candor-core`.
-use criterion::{Criterion, black_box, criterion_group, criterion_main};
+use criterion::{Criterion, criterion_group, criterion_main};
+use std::hint::black_box;
 
 use candor_core::ideal::{AcceptanceCriterion, IdealStateArtifact, VerificationMethod};
 use candor_core::state::AgentState;
